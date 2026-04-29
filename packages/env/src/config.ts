@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { getPiLabGlobalDir } from "@pi-lab/utils";
 
 export interface GlobalEnvFile {
   exists: boolean;
@@ -8,7 +9,7 @@ export interface GlobalEnvFile {
 }
 
 export function getGlobalEnvPath(homeDir = homedir()): string {
-  return join(homeDir, ".pi", "agent", "pi-lab", ".env");
+  return join(getPiLabGlobalDir(homeDir), ".env");
 }
 
 export function readGlobalEnvFile(filePath = getGlobalEnvPath()): GlobalEnvFile {

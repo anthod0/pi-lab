@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { getPiLabGlobalTmpDir } from "@pi-lab/utils";
 
 export function getBinaryTempDir(home = homedir()): string {
-	return join(home, ".pi", "agent", "pi-lab", "tmp", "webfetch");
+	return getPiLabGlobalTmpDir("webfetch", home);
 }

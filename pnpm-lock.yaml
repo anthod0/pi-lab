@@ -78,6 +78,9 @@ importers:
       '@mariozechner/pi-coding-agent':
         specifier: 'catalog:'
         version: 0.67.68(ws@8.20.0)(zod@4.3.6)
+      '@pi-lab/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@types/node':
         specifier: 'catalog:'
         version: 25.6.0
@@ -112,12 +115,30 @@ importers:
       '@mariozechner/pi-coding-agent':
         specifier: 'catalog:'
         version: 0.67.68(ws@8.20.0)(zod@4.3.6)
+      '@pi-lab/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@sinclair/typebox':
         specifier: 'catalog:'
         version: 0.34.49
       tsdown:
         specifier: 'catalog:'
         version: 0.21.9(typescript@6.0.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
+  packages/utils:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.6.0
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.21.9(typescript@6.0.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   packages/webfetch:
     dependencies:
@@ -143,6 +164,9 @@ importers:
       '@mariozechner/pi-tui':
         specifier: 'catalog:'
         version: 0.67.68
+      '@pi-lab/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@sinclair/typebox':
         specifier: 'catalog:'
         version: 0.34.49

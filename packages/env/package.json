@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@mariozechner/pi-coding-agent": "catalog:",
+    "@pi-lab/utils": "workspace:*",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"

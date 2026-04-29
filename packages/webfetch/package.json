@@ -22,6 +22,7 @@
   "devDependencies": {
     "@mariozechner/pi-coding-agent": "catalog:",
     "@mariozechner/pi-tui": "catalog:",
+    "@pi-lab/utils": "workspace:*",
     "@sinclair/typebox": "catalog:",
     "@types/mozilla__readability": "catalog:",
     "@types/node": "catalog:",

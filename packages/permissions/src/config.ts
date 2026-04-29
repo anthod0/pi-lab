@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getPiLabGlobalDir, getPiLabLocalDir } from "@pi-lab/utils";
 
 export type Action = "allow" | "deny" | "ask";
 
@@ -35,9 +36,9 @@ function loadRulesFromFile(filePath: string): Rule[] {
   return [];
 }
 
-export function loadConfig(cwd: string): PermissionConfig {
-  const globalConfigPath = path.join(os.homedir(), ".pi", "agent", "pi-lab", "permissions.json");
-  const localConfigPath = path.join(cwd, ".pi", "pi-lab", "permissions.json");
+export function loadConfig(cwd: string, home = os.homedir()): PermissionConfig {
+  const globalConfigPath = path.join(getPiLabGlobalDir(home), "permissions.json");
+  const localConfigPath = path.join(getPiLabLocalDir(cwd), "permissions.json");
 
   const globalRules = loadRulesFromFile(globalConfigPath);
   const localRules = loadRulesFromFile(localConfigPath);

@@ -27,12 +27,15 @@
     ]
   },
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "devDependencies": {
     "@mariozechner/pi-coding-agent": "catalog:",
+    "@pi-lab/utils": "workspace:*",
     "@sinclair/typebox": "catalog:",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "tsx": "catalog:"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "catalog:",
