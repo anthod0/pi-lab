@@ -26,6 +26,20 @@ Refer to the pi documentation for all supported event types.
 3. Manage shared dependency versions centrally in the `catalog` section of `pnpm-workspace.yaml`; sub-packages reference them via `catalog:`.
 4. Reference `@mariozechner/pi-coding-agent` from the catalog as a devDependency or peerDependency.
 5. Entry point is `src/index.ts`; compiled output goes to `dist/`.
+6. All new plugin packages that use `tsdown` must inline the internal utils package in `tsdown.config.ts`:
+
+   ```typescript
+   import { defineConfig } from "tsdown";
+
+   export default defineConfig({
+     entry: "src/index.ts",
+     deps: {
+       alwaysBundle: ["@pi-lab/utils"],
+     },
+   });
+   ```
+
+   Add `@pi-lab/utils` as a devDependency with `pnpm --filter <pkg-name> add -D @pi-lab/utils@workspace:*` when the package imports it.
 
 ### Dependency Management
 
