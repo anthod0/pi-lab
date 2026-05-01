@@ -16,10 +16,10 @@ function readJsonFile(filePath: string): PiSettings {
 	}
 }
 
-export function readPiProjectSettings(): PiSettings {
-	return readJsonFile(join(process.cwd(), ".pi", "settings.json"));
+export function readPiProjectSettings(cwd = process.cwd()): PiSettings {
+	return readJsonFile(join(cwd, ".pi", "settings.json"));
 }
 
-export function readPiUserSettings(): PiSettings {
-	return readJsonFile(join(homedir(), ".pi", "agent", "settings.json"));
+export function readPiUserSettings(home = homedir()): PiSettings {
+	return readJsonFile(join(home, ".pi", "agent", "settings.json"));
 }

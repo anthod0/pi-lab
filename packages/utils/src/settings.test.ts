@@ -70,6 +70,33 @@ test("readPiUserSettings parses ~/.pi/agent/settings.json", () => {
 	}
 });
 
+test("settings readers can read from explicit project and home directories", () => {
+	const projectDir = mkdtempSync(join(tmpdir(), "pi-lab-explicit-project-settings-"));
+	const homeDir = mkdtempSync(join(tmpdir(), "pi-lab-explicit-user-settings-"));
+	try {
+		mkdirSync(join(projectDir, ".pi"), { recursive: true });
+		mkdirSync(join(homeDir, ".pi", "agent"), { recursive: true });
+		writeFileSync(
+			join(projectDir, ".pi", "settings.json"),
+			JSON.stringify({ permissions: { rules: [{ match: { tool: "read" }, action: "deny" }] } }),
+		);
+		writeFileSync(
+			join(homeDir, ".pi", "agent", "settings.json"),
+			JSON.stringify({ permissions: { rules: [{ match: { tool: "bash" }, action: "ask" }] } }),
+		);
+
+		assert.deepEqual(readPiProjectSettings(projectDir), {
+			permissions: { rules: [{ match: { tool: "read" }, action: "deny" }] },
+		});
+		assert.deepEqual(readPiUserSettings(homeDir), {
+			permissions: { rules: [{ match: { tool: "bash" }, action: "ask" }] },
+		});
+	} finally {
+		rmSync(projectDir, { recursive: true, force: true });
+		rmSync(homeDir, { recursive: true, force: true });
+	}
+});
+
 test("settings readers return empty objects when settings.json is missing", () => {
 	const projectDir = mkdtempSync(join(tmpdir(), "pi-lab-missing-project-settings-"));
 	const homeDir = mkdtempSync(join(tmpdir(), "pi-lab-missing-user-settings-"));

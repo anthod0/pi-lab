@@ -10,36 +10,40 @@ pi install npm:@pi-lab/permissions
 
 ## Configuration
 
-Rules are loaded from two locations and merged into a single list:
+Rules are configured in pi settings and merged into a single list:
 
-- `~/.pi/agent/pi-lab/permissions.json` — global
-- `.pi/pi-lab/permissions.json` — project
+- `~/.pi/agent/settings.json` — global
+- `.pi/settings.json` — project
+
+Example `settings.json`:
 
 ```json
 {
-  "rules": [
-    {
-      "message": "Block rm -rf",
-      "priority": 10,
-      "match": { "tool": "bash", "params": { "command": "rm\\s+-rf" } },
-      "action": "deny"
-    },
-    {
-      "match": { "tool": "bash", "params": { "command": "sudo" } },
-      "action": "ask"
-    },
-    {
-      "message": "Only allow reading files inside the project",
-      "priority": 10,
-      "match": { "tool": "read", "paths": ["~/projects/my-app/**"] },
-      "action": "allow"
-    },
-    {
-      "message": "read is restricted to allowed paths only",
-      "match": { "tool": "read" },
-      "action": "deny"
-    }
-  ]
+  "permissions": {
+    "rules": [
+      {
+        "message": "Block rm -rf",
+        "priority": 10,
+        "match": { "tool": "bash", "params": { "command": "rm\\s+-rf" } },
+        "action": "deny"
+      },
+      {
+        "match": { "tool": "bash", "params": { "command": "sudo" } },
+        "action": "ask"
+      },
+      {
+        "message": "Only allow reading files inside the project",
+        "priority": 10,
+        "match": { "tool": "read", "paths": ["~/projects/my-app/**"] },
+        "action": "allow"
+      },
+      {
+        "message": "read is restricted to allowed paths only",
+        "match": { "tool": "read" },
+        "action": "deny"
+      }
+    ]
+  }
 }
 ```
 
