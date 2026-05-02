@@ -9,7 +9,7 @@ export interface LoadResult {
   skippedKeys: string[];
 }
 
-const DISPLAY_PATH = "~/.pi/agent/pi-lab/.env";
+const DISPLAY_PATH = "~/.pi/agent/.env";
 
 export function mergeEnv(
   parsed: Record<string, string | undefined>,
@@ -42,7 +42,7 @@ export function loadGlobalEnv(
 
     if (!envFile.exists || envFile.content === undefined) {
       return {
-        path: filePath,
+        path: envFile.path,
         exists: false,
         loadedKeys: [],
         skippedKeys: [],
@@ -53,7 +53,7 @@ export function loadGlobalEnv(
     const { loadedKeys, skippedKeys } = mergeEnv(parsed, target);
 
     return {
-      path: filePath,
+      path: envFile.path,
       exists: true,
       loadedKeys,
       skippedKeys,

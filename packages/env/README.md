@@ -1,6 +1,6 @@
 # @pi-lab/env
 
-Load global env vars for pi from `~/.pi/agent/pi-lab/.env`.
+Load global env vars for pi from `~/.pi/agent/.env`.
 
 ## Install
 
@@ -13,7 +13,7 @@ pi install npm:@pi-lab/env
 Create:
 
 ```bash
-~/.pi/agent/pi-lab/.env
+~/.pi/agent/.env
 ```
 
 Example:

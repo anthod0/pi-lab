@@ -8,11 +8,8 @@ import test from "node:test";
 import { getGlobalEnvPath } from "./config";
 import { loadGlobalEnv } from "./load";
 
-test("getGlobalEnvPath resolves ~/.pi/agent/pi-lab/.env", () => {
-  assert.equal(
-    getGlobalEnvPath("/tmp/home"),
-    "/tmp/home/.pi/agent/pi-lab/.env",
-  );
+test("getGlobalEnvPath resolves ~/.pi/agent/.env", () => {
+  assert.equal(getGlobalEnvPath("/tmp/home"), "/tmp/home/.pi/agent/.env");
 });
 
 test("loadGlobalEnv skips missing file", () => {
@@ -30,7 +27,7 @@ test("loadGlobalEnv skips missing file", () => {
 test("loadGlobalEnv preserves existing target values and injects missing values", () => {
   const home = mkdtempSync(join(tmpdir(), "pi-env-home-"));
   const envPath = getGlobalEnvPath(home);
-  mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+  mkdirSync(join(home, ".pi", "agent"), { recursive: true });
   writeFileSync(envPath, "EXISTING=from-file\nNEW_VALUE=from-file\n", "utf8");
 
   const target: NodeJS.ProcessEnv = { EXISTING: "from-shell" };
@@ -46,7 +43,7 @@ test("loadGlobalEnv preserves existing target values and injects missing values"
 test("loadGlobalEnv parses with isolated processEnv", () => {
   const home = mkdtempSync(join(tmpdir(), "pi-env-home-"));
   const envPath = getGlobalEnvPath(home);
-  mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+  mkdirSync(join(home, ".pi", "agent"), { recursive: true });
   writeFileSync(envPath, "DERIVED=${AMBIENT_TEST}\n", "utf8");
 
   process.env.AMBIENT_TEST = "from-process";
@@ -65,14 +62,43 @@ test("loadGlobalEnv surfaces read failures with config path", () => {
 
   assert.throws(
     () => loadGlobalEnv({}, envPath),
-    /Failed to load ~\/\.pi\/agent\/pi-lab\/\.env/,
+    /Failed to load ~\/\.pi\/agent\/\.env/,
   );
+});
+
+test("falls back to legacy ~/.pi/agent/pi-lab/.env when new file is missing", () => {
+  const home = mkdtempSync(join(tmpdir(), "pi-env-home-"));
+  const legacyEnvPath = join(home, ".pi", "agent", "pi-lab", ".env");
+  mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+  writeFileSync(legacyEnvPath, "LEGACY_VALUE=from-legacy\n", "utf8");
+
+  const target: NodeJS.ProcessEnv = {};
+  const result = loadGlobalEnv(target, getGlobalEnvPath(home));
+
+  assert.equal(target.LEGACY_VALUE, "from-legacy");
+  assert.equal(result.exists, true);
+  assert.equal(result.path, legacyEnvPath);
+});
+
+test("prefers ~/.pi/agent/.env over legacy ~/.pi/agent/pi-lab/.env", () => {
+  const home = mkdtempSync(join(tmpdir(), "pi-env-home-"));
+  const envPath = getGlobalEnvPath(home);
+  const legacyEnvPath = join(home, ".pi", "agent", "pi-lab", ".env");
+  mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+  writeFileSync(envPath, "VALUE=from-new\n", "utf8");
+  writeFileSync(legacyEnvPath, "VALUE=from-legacy\n", "utf8");
+
+  const target: NodeJS.ProcessEnv = {};
+  const result = loadGlobalEnv(target, envPath);
+
+  assert.equal(target.VALUE, "from-new");
+  assert.equal(result.path, envPath);
 });
 
 test("injected env is inherited by child processes", () => {
   const home = mkdtempSync(join(tmpdir(), "pi-env-home-"));
   const envPath = getGlobalEnvPath(home);
-  mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+  mkdirSync(join(home, ".pi", "agent"), { recursive: true });
   writeFileSync(envPath, "PI_LAB_CHILD_TEST=from-file\n", "utf8");
 
   const target: NodeJS.ProcessEnv = {};
