@@ -74,3 +74,67 @@ A dialog prompts the user with four options:
 - **Allow always** — allow identical calls for the rest of the session (not persisted)
 - **Deny** — deny this call once
 - **Deny always** — deny identical calls for the rest of the session (not persisted)
+
+## Events
+
+The extension broadcasts observational events on `pi.events`. Listeners cannot change permission decisions, cache behavior, or blocked responses.
+
+### Event names
+
+- `permissions:deny` — emitted whenever a tool call is blocked
+- `permissions:ask` — emitted immediately before a real user prompt is shown
+- `permissions:user_select` — emitted after the prompt resolves
+
+### Payloads
+
+All payloads include the matched rule serialized with configured patterns only. Raw tool input is never broadcast.
+
+```ts
+type SerializedPermissionRule = {
+  action: "allow" | "deny" | "ask";
+  message?: string;
+  priority?: number;
+  match: {
+    tool: string;
+    params?: Record<string, string>;
+    paths?: string[];
+    pathParam?: string;
+  };
+};
+
+type PermissionsDenyEvent = {
+  toolCallId: string;
+  toolName: string;
+  reason: string;
+  source: "rule" | "cache" | "user" | "no_ui";
+  rule: SerializedPermissionRule;
+};
+
+type PermissionsAskEvent = {
+  toolCallId: string;
+  toolName: string;
+  rule: SerializedPermissionRule;
+  options: ["Allow", "Allow always", "Deny", "Deny always"];
+};
+
+type PermissionsUserSelectEvent = {
+  toolCallId: string;
+  toolName: string;
+  selection: "Allow" | "Allow always" | "Deny" | "Deny always" | null;
+  decision: "allow" | "deny";
+  cached: boolean;
+  rule: SerializedPermissionRule;
+};
+```
+
+### Privacy guarantee
+
+Event payloads never include `event.input` or derived raw argument values such as shell commands, file paths, or file contents. The `params` and `paths` fields contain only the configured rule patterns.
+
+### Example listener
+
+```ts
+pi.events.on("permissions:deny", (event) => {
+  console.log(event);
+});
+```

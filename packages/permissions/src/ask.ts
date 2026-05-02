@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { buildTitle } from "./format";
+import { PERMISSION_OPTIONS, type PermissionSelection } from "./events";
 
 export class SessionCache {
 	private cache: Map<string, "allow" | "deny"> = new Map();
@@ -23,26 +24,32 @@ export class SessionCache {
 	}
 }
 
+export type AskUserResult = {
+	selection: PermissionSelection | null;
+	decision: "allow" | "deny";
+	cached: boolean;
+};
+
 export async function askUser(
 	toolName: string,
 	input: Record<string, unknown>,
 	cache: SessionCache,
 	ctx: ExtensionContext
-): Promise<"allow" | "deny"> {
+): Promise<AskUserResult> {
 	const title = buildTitle(toolName, input);
 
-	const result = await ctx.ui.select(title, ["Allow", "Allow always", "Deny", "Deny always"]);
+	const result = (await ctx.ui.select(title, PERMISSION_OPTIONS)) as PermissionSelection | null;
 
 	if (result === "Allow always") {
 		cache.set(toolName, input, "allow");
-		return "allow";
+		return { selection: result, decision: "allow", cached: true };
 	} else if (result === "Deny always") {
 		cache.set(toolName, input, "deny");
-		return "deny";
+		return { selection: result, decision: "deny", cached: true };
 	} else if (result === "Allow") {
-		return "allow";
+		return { selection: result, decision: "allow", cached: false };
 	} else {
 		// "Deny" or null (user closed)
-		return "deny";
+		return { selection: result === "Deny" ? result : null, decision: "deny", cached: false };
 	}
 }
