@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { readPiProjectSettings, readPiUserSettings } from "./settings.js";
+import { mergePiSettings, readMergedPiSettings, readPiProjectSettings, readPiUserSettings } from "./settings.js";
 
 function withCwd<T>(cwd: string, fn: () => T): T {
 	const previousCwd = process.cwd();
@@ -118,5 +118,60 @@ test("settings readers throw invalid JSON errors", () => {
 		assert.throws(() => withCwd(projectDir, () => readPiProjectSettings()), SyntaxError);
 	} finally {
 		rmSync(projectDir, { recursive: true, force: true });
+	}
+});
+
+test("mergePiSettings deep merges project settings over user settings", () => {
+	const merged = mergePiSettings(
+		{
+			theme: "dark",
+			xsearch: {
+				model: "user-model",
+				enableImageUnderstanding: true,
+				allowedModels: ["a", "b"],
+			},
+		},
+		{
+			xsearch: {
+				model: "project-model",
+				allowedModels: ["c"],
+			},
+		},
+	);
+
+	assert.deepEqual(merged, {
+		theme: "dark",
+		xsearch: {
+			model: "project-model",
+			enableImageUnderstanding: true,
+			allowedModels: ["c"],
+		},
+	});
+});
+
+test("readMergedPiSettings reads user and project settings and applies project overrides", () => {
+	const projectDir = mkdtempSync(join(tmpdir(), "pi-lab-merged-project-settings-"));
+	const homeDir = mkdtempSync(join(tmpdir(), "pi-lab-merged-user-settings-"));
+	try {
+		mkdirSync(join(projectDir, ".pi"), { recursive: true });
+		mkdirSync(join(homeDir, ".pi", "agent"), { recursive: true });
+		writeFileSync(
+			join(homeDir, ".pi", "agent", "settings.json"),
+			JSON.stringify({ xsearch: { model: "user-model", enableVideoUnderstanding: true } }),
+		);
+		writeFileSync(
+			join(projectDir, ".pi", "settings.json"),
+			JSON.stringify({ xsearch: { model: "project-model" } }),
+		);
+
+		assert.deepEqual(readMergedPiSettings({ cwd: projectDir, home: homeDir }), {
+			xsearch: {
+				model: "project-model",
+				enableVideoUnderstanding: true,
+			},
+		});
+	} finally {
+		rmSync(projectDir, { recursive: true, force: true });
+		rmSync(homeDir, { recursive: true, force: true });
 	}
 });

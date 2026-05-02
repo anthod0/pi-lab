@@ -10,6 +10,8 @@ A collection of [pi coding agent](https://github.com/badlogic/pi-mono) extension
 | ------------------------------------------------- | ------------------------------------------------------------------ |
 | [@pi-lab/permissions](./packages/permissions)     | Permission system — enforce allow / deny / ask rules on tool calls |
 | [@pi-lab/webfetch](./packages/webfetch)           | Fetch URL and get clean Markdown                                   |
+| [@pi-lab/websearch](./packages/websearch)         | Search the web with Exa                                            |
+| [@pi-lab/xsearch](./packages/xsearch)             | Search X/Twitter with xAI Grok and citation URLs                   |
 | [@pi-lab/env](./packages/env)                     | Load `.env` into pi sessions                                       |
 | [@pi-lab/input-history](./packages/input-history) | `↑` recalls inputs across all sessions in the same project         |
 
