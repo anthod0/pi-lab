@@ -1,0 +1,36 @@
+{
+  "name": "@pi-lab/websearch",
+  "version": "0.1.0",
+  "description": "Exa-powered web search tool extension for pi coding agent",
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.mjs"
+    ]
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "catalog:",
+    "@mariozechner/pi-tui": "catalog:",
+    "@sinclair/typebox": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "catalog:",
+    "@mariozechner/pi-tui": "catalog:",
+    "@sinclair/typebox": "catalog:"
+  }
+}
