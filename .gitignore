@@ -4,3 +4,4 @@ node_modules/
 .pi
 dist/
 *.tsbuildinfo
+specs
