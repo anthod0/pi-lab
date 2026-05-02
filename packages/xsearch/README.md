@@ -17,7 +17,7 @@ export XAI_API_KEY=<your-api-key>
 pi
 ```
 
-You can also provide `XAI_API_KEY` through `@pi-lab/env`.
+You can also provide `XAI_API_KEY` through [@pi-lab/env](../env).
 
 Once installed and configured, ask pi to search X/Twitter. For example:
 
