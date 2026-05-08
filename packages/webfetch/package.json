@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/webfetch",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "WebFetch tool extension for pi coding agent",
   "keywords": [
     "pi-package"

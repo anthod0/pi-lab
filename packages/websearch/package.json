@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/websearch",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "Exa-powered web search tool extension for pi coding agent",
   "keywords": [
     "pi-package"
