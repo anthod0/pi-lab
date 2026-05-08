@@ -17,20 +17,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Detect changed packages
         id: detect
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           PACKAGES=()
+          NULL_SHA="0000000000000000000000000000000000000000"
+
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "$NULL_SHA" ]; then
+            echo "No valid before SHA found; treating previous versions as empty"
+            BEFORE_SHA=""
+          else
+            echo "Comparing package versions from $BEFORE_SHA to $GITHUB_SHA"
+          fi
+
           for pkg_json in packages/*/package.json; do
             pkg_name=$(basename $(dirname $pkg_json))
 
-            OLD=$(git show HEAD~1:$pkg_json 2>/dev/null | jq -r '.version // empty')
-            NEW=$(jq -r '.version' $pkg_json)
+            if [ -n "$BEFORE_SHA" ]; then
+              OLD=$(git show "$BEFORE_SHA:$pkg_json" 2>/dev/null | jq -r '.version // empty')
+            else
+              OLD=""
+            fi
+            NEW=$(jq -r '.version // empty' $pkg_json)
 
             if [ -n "$NEW" ] && [ "$OLD" != "$NEW" ]; then
-              echo "  $pkg_name: $OLD → $NEW"
+              echo "  $pkg_name: ${OLD:-<none>} → $NEW"
               PACKAGES+=("$pkg_name")
             fi
           done
