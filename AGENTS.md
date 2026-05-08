@@ -5,7 +5,7 @@
 Each plugin's `src/index.ts` must **default-export** a function matching the `ExtensionAPI` callback signature:
 
 ```typescript
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (event, ctx) => {
@@ -24,7 +24,7 @@ Refer to the pi documentation for all supported event types.
 1. Create a subdirectory under `packages/` using kebab-case naming.
 2. Create `package.json` with the `name` field set to `@pi-lab/<name>` and ensure it includes a `build` script.
 3. Manage shared dependency versions centrally in the `catalog` section of `pnpm-workspace.yaml`; sub-packages reference them via `catalog:`.
-4. Reference `@mariozechner/pi-coding-agent` from the catalog as a devDependency or peerDependency.
+4. Reference `@earendil-works/pi-coding-agent` from the catalog as a devDependency or peerDependency.
 5. Entry point is `src/index.ts`; compiled output goes to `dist/`.
 6. All new plugin packages that use `tsdown` must inline the internal utils package in `tsdown.config.ts`:
 

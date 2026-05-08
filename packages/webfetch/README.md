@@ -1,6 +1,6 @@
 # @pi-lab/webfetch
 
-A web fetching extension for [pi coding agent](https://github.com/badlogic/pi-mono). Adds a `webfetch` tool — fetch any URL and get back clean Markdown, ready for the model to read.
+A web fetching extension for [pi coding agent](https://github.com/earendil-works/pi). Adds a `webfetch` tool — fetch any URL and get back clean Markdown, ready for the model to read.
 
 ## Install
 

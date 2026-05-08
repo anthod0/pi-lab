@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/env",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Global environment loader extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -31,14 +31,14 @@
     "test": "tsx --test src/**/*.test.ts"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
     "@pi-lab/utils": "workspace:*",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "catalog:"
+    "@earendil-works/pi-coding-agent": "catalog:"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "catalog:"

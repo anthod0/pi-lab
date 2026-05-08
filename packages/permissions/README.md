@@ -1,6 +1,6 @@
 # @pi-lab/permissions
 
-A permission system extension for [pi coding agent](https://github.com/badlogic/pi-mono). Intercepts tool calls and enforces allow / deny / ask rules defined in a JSON config file.
+A permission system extension for [pi coding agent](https://github.com/earendil-works/pi). Intercepts tool calls and enforces allow / deny / ask rules defined in a JSON config file.
 
 ## Install
 

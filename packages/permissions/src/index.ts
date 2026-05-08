@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadConfig, type PermissionConfig, type Rule } from "./config";
 import { sortRules, evaluate } from "./rules";
 import { SessionCache, askUser } from "./ask";

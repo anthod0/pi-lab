@@ -1,6 +1,6 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { CustomEditor } from "@mariozechner/pi-coding-agent";
-import { matchesKey } from "@mariozechner/pi-tui";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { CustomEditor } from "@earendil-works/pi-coding-agent";
+import { matchesKey } from "@earendil-works/pi-tui";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 

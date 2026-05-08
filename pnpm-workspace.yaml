@@ -2,8 +2,8 @@ packages:
   - packages/*
 catalog:
   '@dotenvx/dotenvx': ^1.61.5
-  '@mariozechner/pi-coding-agent': ^0.67.68
-  '@mariozechner/pi-tui': ^0.67.68
+  '@earendil-works/pi-coding-agent': ^0.74.0
+  '@earendil-works/pi-tui': ^0.74.0
   '@mozilla/readability': ^0.5.0
   '@sinclair/typebox': ^0.34.49
   '@types/mozilla__readability': ^0.4.0

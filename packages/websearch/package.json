@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/websearch",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Exa-powered web search tool extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -21,16 +21,16 @@
     "test": "tsx --test src/**/*.test.ts"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "catalog:",
-    "@mariozechner/pi-tui": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@sinclair/typebox": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "catalog:",
-    "@mariozechner/pi-tui": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@sinclair/typebox": "catalog:"
   }
 }

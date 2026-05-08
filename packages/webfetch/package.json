@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/webfetch",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "WebFetch tool extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -20,8 +20,8 @@
     "build": "tsdown"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "catalog:",
-    "@mariozechner/pi-tui": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@pi-lab/utils": "workspace:*",
     "@sinclair/typebox": "catalog:",
     "@types/mozilla__readability": "catalog:",
@@ -30,8 +30,8 @@
     "tsdown": "catalog:"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "catalog:",
-    "@mariozechner/pi-tui": "catalog:",
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@sinclair/typebox": "catalog:"
   },
   "dependencies": {

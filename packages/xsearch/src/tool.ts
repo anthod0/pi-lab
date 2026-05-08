@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
-import { type ExtensionAPI, keyHint } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import { type ExtensionAPI, keyHint } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { readMergedPiSettings, type PiSettings } from "@pi-lab/utils";
 import { loadXSearchConfig, searchX, type XSearchDetails, type XSearchParams } from "./xai.js";
 

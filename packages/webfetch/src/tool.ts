@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
-import { type ExtensionAPI, keyHint } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import { type ExtensionAPI, keyHint } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import type { WebFetchConfig } from "./config.js";
 import { WebFetchCache } from "./cache.js";
 import { normalizeUrl } from "./normalize.js";
