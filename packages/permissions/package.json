@@ -6,15 +6,15 @@
     "pi-package"
   ],
   "license": "MIT",
-  "author": "ocherry341",
-  "homepage": "https://github.com/ocherry341/pi-lab/tree/main/packages/permissions",
+  "author": "anthod0",
+  "homepage": "https://github.com/anthod0/pi-lab/tree/main/packages/permissions",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ocherry341/pi-lab.git",
+    "url": "git+https://github.com/anthod0/pi-lab.git",
     "directory": "packages/permissions"
   },
   "bugs": {
-    "url": "https://github.com/ocherry341/pi-lab/issues"
+    "url": "https://github.com/anthod0/pi-lab/issues"
   },
   "type": "module",
   "files": [

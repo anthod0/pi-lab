@@ -24,7 +24,7 @@ pi install npm:@pi-lab/permissions
 Or pin to a git ref:
 
 ```bash
-pi install git:github.com/ocherry341/pi-lab@main
+pi install git:github.com/anthod0/pi-lab@main
 ```
 
 ## Development
