@@ -33,7 +33,7 @@ export interface InlineScript {
 export interface ContentProcessResult {
 	markdown: string;
 	scripts: InlineScript[];
-	method: "readability" | "full-html" | "plain";
+	method: "readability" | "full-html" | "plain" | "optimized";
 }
 
 /**
