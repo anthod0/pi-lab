@@ -108,17 +108,63 @@ function decodeHtmlEntities(text: string): string {
 	return result;
 }
 
-function mediaUrls(tweet: Record<string, unknown>): string[] {
+interface MarkdownMediaItem {
+	type: "photo" | "video" | "gif";
+	url: string;
+	thumbnailUrl?: string;
+}
+
+function tweetMedia(tweet: Record<string, unknown>): unknown[] {
 	const extended = isObject(tweet.extended_entities) ? tweet.extended_entities : undefined;
 	const entities = isObject(tweet.entities) ? tweet.entities : undefined;
-	const media = Array.isArray(extended?.media) ? extended.media : Array.isArray(entities?.media) ? entities.media : [];
-	const urls = new Set<string>();
-	for (const item of media) {
-		if (!isObject(item)) continue;
-		const url = stringValue(item.media_url_https) ?? stringValue(item.media_url);
-		if (url) urls.add(url);
+	return Array.isArray(extended?.media) ? extended.media : Array.isArray(entities?.media) ? entities.media : [];
+}
+
+function bestMp4Variant(media: Record<string, unknown>): string | undefined {
+	const videoInfo = isObject(media.video_info) ? media.video_info : undefined;
+	const variants = Array.isArray(videoInfo?.variants) ? videoInfo.variants : [];
+	let best: { url: string; bitrate: number } | undefined;
+
+	for (const variant of variants) {
+		if (!isObject(variant)) continue;
+		const url = stringValue(variant.url);
+		if (!url) continue;
+		const contentType = stringValue(variant.content_type) ?? "";
+		const isMp4 = contentType.includes("mp4") || url.includes(".mp4");
+		if (!isMp4 || url.includes("hevc")) continue;
+		const bitrate = numberValue(variant.bitrate) ?? 0;
+		if (!best || bitrate > best.bitrate) best = { url, bitrate };
 	}
-	return [...urls];
+
+	return best?.url;
+}
+
+function markdownMedia(tweet: Record<string, unknown>): MarkdownMediaItem[] {
+	const items: MarkdownMediaItem[] = [];
+	const seen = new Set<string>();
+	for (const item of tweetMedia(tweet)) {
+		if (!isObject(item)) continue;
+		const mediaType = stringValue(item.type);
+		const thumbnailUrl = stringValue(item.media_url_https) ?? stringValue(item.media_url);
+		if (mediaType === "video" || mediaType === "animated_gif") {
+			const url = bestMp4Variant(item);
+			if (url && !seen.has(url)) {
+				seen.add(url);
+				items.push({
+					type: mediaType === "animated_gif" ? "gif" : "video",
+					url,
+					thumbnailUrl,
+				});
+			}
+			continue;
+		}
+
+		if (thumbnailUrl && !seen.has(thumbnailUrl)) {
+			seen.add(thumbnailUrl);
+			items.push({ type: "photo", url: thumbnailUrl });
+		}
+	}
+	return items;
 }
 
 function formatStats(tweet: Record<string, unknown>): string | undefined {
@@ -149,7 +195,7 @@ function renderTweetMarkdown(tweet: Record<string, unknown>, users: Record<strin
 	const screenName = stringValue(userObj?.screen_name);
 	const createdAt = stringValue(tweet.created_at);
 	const stats = formatStats(tweet);
-	const media = mediaUrls(tweet);
+	const media = markdownMedia(tweet);
 
 	let body = decodeHtmlEntities(text).replace(/\s+https:\/\/t\.co\/\S+\s*$/g, "").trim();
 	if (!body) return undefined;
@@ -160,7 +206,18 @@ function renderTweetMarkdown(tweet: Record<string, unknown>, users: Record<strin
 	if (stats) lines.push(stats);
 	lines.push("", body);
 	if (media.length > 0) {
-		lines.push("", "Media:", ...media.map((url) => `- ${url}`));
+		lines.push("", "Media:");
+		for (const item of media) {
+			if (item.type === "video") {
+				lines.push(`- Video: ${item.url}`);
+				if (item.thumbnailUrl) lines.push(`  Thumbnail: ${item.thumbnailUrl}`);
+			} else if (item.type === "gif") {
+				lines.push(`- GIF: ${item.url}`);
+				if (item.thumbnailUrl) lines.push(`  Thumbnail: ${item.thumbnailUrl}`);
+			} else {
+				lines.push(`- ${item.url}`);
+			}
+		}
 	}
 	return lines.join("\n");
 }
