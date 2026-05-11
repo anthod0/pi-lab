@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { mergeConfig } from "./config.js";
+import { readMergedPiSettings } from "@pi-lab/utils";
+import { loadWebFetchConfig, mergeConfig } from "./config.js";
 import { registerWebFetchTool } from "./tool.js";
 
 /**
@@ -13,14 +14,15 @@ import { registerWebFetchTool } from "./tool.js";
  * - Mozilla Readability for HTML → Markdown extraction
  * - Inline script index — use `script=N` to read a specific inline script
  * - LRU cache (50 MB, 15 min TTL) keyed on normalized URL
+ * - Built-in fetch optimizations (enabled by default), including Reddit URL rewrite
  * - Pagination via offset/max_length parameters
  */
 export default function (pi: ExtensionAPI) {
-	const config = mergeConfig();
+	const config = loadWebFetchConfig(readMergedPiSettings());
 	registerWebFetchTool(pi, config);
 }
 
 // Re-export public API for programmatic use
-export { mergeConfig, DEFAULT_CONFIG } from "./config.js";
+export { loadWebFetchConfig, mergeConfig, DEFAULT_CONFIG } from "./config.js";
 export { registerWebFetchTool } from "./tool.js";
 export type { WebFetchConfig } from "./config.js";

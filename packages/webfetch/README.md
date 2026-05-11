@@ -16,3 +16,18 @@ pi install npm:@pi-lab/webfetch
 - **Redirect handling** — same-domain redirects are followed automatically (up to 10 hops); cross-domain redirects are surfaced to the model so it can decide whether to follow.
 - **Binary downloads** — non-text responses (PDFs, images, etc.) are saved to `~/.pi/agent/pi-lab/tmp/webfetch/` and the file path is returned.
 - **LRU cache** — processed Markdown is cached in memory so paginating the same URL doesn't re-fetch.
+- **Built-in fetch optimizations** — enabled by default. Site-specific rules can rewrite difficult URLs before fetching; Reddit links are currently rewritten to `old.reddit.com`. The optimization framework also includes an X/Twitter HTML hook for future script-first extraction.
+
+## Configuration
+
+Disable the built-in optimization framework in pi settings:
+
+```json
+{
+  "webfetch": {
+    "optimizations": false
+  }
+}
+```
+
+User settings live at `~/.pi/agent/settings.json`; project settings live at `<cwd>/.pi/settings.json` and override user settings.

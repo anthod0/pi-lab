@@ -8,6 +8,7 @@ import { fetchUrl } from "./fetch.js";
 import { processHtml, processPlainText } from "./content.js";
 import type { InlineScript } from "./content.js";
 import { getBinaryTempDir } from "./paths.js";
+import { applyFetchOptimizations, processHtmlWithOptimizations } from "./optimizers/index.js";
 
 // ─── Output shapes ────────────────────────────────────────────────────────────
 
@@ -157,6 +158,9 @@ export function registerWebFetchTool(pi: ExtensionAPI, config: WebFetchConfig): 
 				throw new Error(`Invalid URL: ${url}`);
 			}
 
+			const optimization = applyFetchOptimizations(normalizedUrl, config);
+			normalizedUrl = optimization.url;
+
 			// Temp directory for binary downloads
 			const tempDir = getBinaryTempDir();
 
@@ -208,7 +212,12 @@ export function registerWebFetchTool(pi: ExtensionAPI, config: WebFetchConfig): 
 				});
 
 				if (result.contentType === "text/html") {
-					const processed = await processHtml(result.content, normalizedUrl);
+					const processed = await processHtmlWithOptimizations({
+						url: normalizedUrl,
+						html: result.content,
+						config,
+						defaultProcess: () => processHtml(result.content, normalizedUrl),
+					});
 					entry = { markdown: processed.markdown, scripts: processed.scripts };
 				} else {
 					entry = { markdown: processPlainText(result.content), scripts: [] };
