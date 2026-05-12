@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "A collection of pi coding agent extensions",
   "private": true,
+  "homepage": "https://github.com/anthod0/pi-lab#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthod0/pi-lab.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anthod0/pi-lab/issues"
+  },
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "typecheck": "tsc --noEmit"

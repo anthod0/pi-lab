@@ -1,4 +1,4 @@
-# @pi-lab/input-history
+# @pi-lab/input-history [![NPM Version](https://img.shields.io/npm/v/@pi-lab/input-history)](https://www.npmjs.com/package/@pi-lab/input-history)
 
 Extends the up arrow key history from session-level to project-level.
 

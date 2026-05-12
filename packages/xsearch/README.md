@@ -1,4 +1,4 @@
-# @pi-lab/xsearch
+# @pi-lab/xsearch [![NPM Version](https://img.shields.io/npm/v/@pi-lab/xsearch)](https://www.npmjs.com/package/@pi-lab/xsearch)
 
 A pi extension that adds an `xsearch` tool powered by xAI Grok `x_search`.
 

@@ -1,4 +1,4 @@
-# @pi-lab/notify
+# @pi-lab/notify [![NPM Version](https://img.shields.io/npm/v/@pi-lab/notify)](https://www.npmjs.com/package/@pi-lab/notify)
 
 Desktop notification extension for [pi coding agent](https://github.com/earendil-works/pi).
 

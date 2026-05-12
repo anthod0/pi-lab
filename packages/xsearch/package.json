@@ -6,6 +6,15 @@
     "pi-package"
   ],
   "license": "MIT",
+  "homepage": "https://github.com/anthod0/pi-lab/tree/main/packages/xsearch",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthod0/pi-lab.git",
+    "directory": "packages/xsearch"
+  },
+  "bugs": {
+    "url": "https://github.com/anthod0/pi-lab/issues"
+  },
   "type": "module",
   "files": [
     "dist",

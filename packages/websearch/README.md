@@ -1,4 +1,4 @@
-# @pi-lab/websearch
+# @pi-lab/websearch [![NPM Version](https://img.shields.io/npm/v/@pi-lab/websearch)](https://www.npmjs.com/package/@pi-lab/websearch)
 
 A pi extension that adds a `websearch` tool powered by Exa.
 
