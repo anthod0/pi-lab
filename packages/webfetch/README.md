@@ -1,4 +1,4 @@
-# @pi-lab/webfetch
+# @pi-lab/webfetch [![NPM Version](https://img.shields.io/npm/v/@pi-lab/webfetch)](https://www.npmjs.com/package/@pi-lab/webfetch)
 
 A web fetching extension for [pi coding agent](https://github.com/earendil-works/pi). Adds a `webfetch` tool — fetch any URL and get back clean Markdown, ready for the model to read.
 

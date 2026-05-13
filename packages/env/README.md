@@ -1,4 +1,4 @@
-# @pi-lab/env
+# @pi-lab/env [![NPM Version](https://img.shields.io/npm/v/@pi-lab/env)](https://www.npmjs.com/package/@pi-lab/env)
 
 Load global env vars for pi from `~/.pi/agent/.env`.
 

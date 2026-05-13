@@ -4,14 +4,15 @@ A collection of [pi coding agent](https://github.com/earendil-works/pi) extensio
 
 ## Packages
 
-| Package                                           | Description                                                        |
-| ------------------------------------------------- | ------------------------------------------------------------------ |
-| [@pi-lab/permissions](./packages/permissions)     | Permission system — enforce allow / deny / ask rules on tool calls |
-| [@pi-lab/webfetch](./packages/webfetch)           | Fetch URL and get clean Markdown; includes Reddit/X fetch optimizations |
-| [@pi-lab/websearch](./packages/websearch)         | Search the web with Exa                                            |
-| [@pi-lab/xsearch](./packages/xsearch)             | Search X/Twitter with xAI Grok and citation URLs                   |
-| [@pi-lab/env](./packages/env)                     | Load `.env` into pi sessions                                       |
-| [@pi-lab/input-history](./packages/input-history) | `↑` recalls inputs across all sessions in the same project         |
+| Package                                           | Description                                                             | Version                                                                                                                   |
+| ------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [@pi-lab/permissions](./packages/permissions)     | Permission system — enforce allow / deny / ask rules on tool calls      | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/permissions)](https://www.npmjs.com/package/@pi-lab/permissions)     |
+| [@pi-lab/webfetch](./packages/webfetch)           | Fetch URL and get clean Markdown; includes Reddit/X fetch optimizations | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/webfetch)](https://www.npmjs.com/package/@pi-lab/webfetch)           |
+| [@pi-lab/websearch](./packages/websearch)         | Search the web with Exa                                                 | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/websearch)](https://www.npmjs.com/package/@pi-lab/websearch)         |
+| [@pi-lab/xsearch](./packages/xsearch)             | Search X/Twitter with xAI Grok and citation URLs                        | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/xsearch)](https://www.npmjs.com/package/@pi-lab/xsearch)             |
+| [@pi-lab/env](./packages/env)                     | Load `.env` into pi sessions                                            | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/env)](https://www.npmjs.com/package/@pi-lab/env)                     |
+| [@pi-lab/input-history](./packages/input-history) | `↑` recalls inputs across all sessions in the same project              | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/input-history)](https://www.npmjs.com/package/@pi-lab/input-history) |
+| [@pi-lab/notify](./packages/notify)               | Desktop notifications                                                   | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/notify)](https://www.npmjs.com/package/@pi-lab/notify)               |
 
 ## Install
 

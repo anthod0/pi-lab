@@ -1,4 +1,4 @@
-# @pi-lab/permissions
+# @pi-lab/permissions [![NPM Version](https://img.shields.io/npm/v/@pi-lab/permissions)](https://www.npmjs.com/package/@pi-lab/permissions)
 
 A permission system extension for [pi coding agent](https://github.com/earendil-works/pi). Intercepts tool calls and enforces allow / deny / ask rules defined in a JSON config file.
 
