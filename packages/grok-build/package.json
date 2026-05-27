@@ -1,0 +1,45 @@
+{
+  "name": "@pi-lab/grok-build",
+  "version": "1.0.0",
+  "description": "Grok Build CLI tool extension for pi coding agent",
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/anthod0/pi-lab/tree/main/packages/grok-build",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthod0/pi-lab.git",
+    "directory": "packages/grok-build"
+  },
+  "bugs": {
+    "url": "https://github.com/anthod0/pi-lab/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.mjs"
+    ]
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
+    "@sinclair/typebox": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
+    "@sinclair/typebox": "catalog:"
+  }
+}
