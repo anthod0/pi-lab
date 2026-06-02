@@ -29,6 +29,16 @@ Or pin to a git ref:
 pi install git:github.com/anthod0/pi-lab@main
 ```
 
+### X/Twitter tool comparison
+
+All three tools can be useful, depending on the task:
+
+| Tool         | Best for                                                             | Notes                                                                                                                                                                      |
+| ------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `grok_build` | Reading X posts/threads with rich context; natural-language X search | Usually gives the most complete context, including replies, quotes, media details, views, and bookmarks. Native X search typically returns about 10 posts per search call. |
+| `xsearch`    | Broader X search with many citation URLs                             | Uses the xAI API-key workflow and is better when you need more search results/citations rather than deep thread context.                                                   |
+| `webfetch`   | Fast, simple fetch of a single X post body                           | Usually faster and more deterministic, but returns less context than Grok Build.                                                                                           |
+
 ## Development
 
 ```bash
