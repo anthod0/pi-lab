@@ -11,12 +11,14 @@ export function registerGrokBuildTool(pi: ExtensionAPI, options: GrokBuildToolOp
   pi.registerTool({
     name: "grok_build",
     label: "Grok Build",
-    description: "Run the local Grok Build CLI in headless mode with a single natural-language prompt.",
-    promptSnippet: "Use Grok Build for image or video generation from a prompt",
+    description: "Run the local Grok Build CLI in headless mode for image/video generation plus Grok-native X/Twitter search and thread fetch tasks.",
+    promptSnippet: "Use Grok Build for image/video generation or richer Grok-native X/Twitter search and thread fetch",
     promptGuidelines: [
-      "Use grok_build only for image generation, image edit, and video generation.",
-      "grok_build can do web search and web fetch, but prefer native pi tools for those tasks.",
-      "Do not call grok_build for any other task.",
+      "Use grok_build for image/video generation and for user requests to search X/Twitter or read an X/Twitter post/thread.",
+      "If the user pastes an X/Twitter URL, pass the URL to Grok and ask it to read the post/thread with context, replies, quotes, media, views, and bookmarks when available.",
+      "For X/Twitter search, ask Grok for relevant posts and include date/account filters from the user request when present.",
+      "Prefer native webfetch for a simple single-post body; prefer native websearch for general web search.",
+      "Do not use grok_build for coding tasks or routine shell/file operations.",
     ],
     parameters: Type.Object({
       prompt: Type.String({ description: "Natural-language instruction for Grok Build. Grok Build decides the task type from this prompt." }),
