@@ -1,6 +1,8 @@
 # @pi-lab/xsearch [![NPM Version](https://img.shields.io/npm/v/@pi-lab/xsearch)](https://www.npmjs.com/package/@pi-lab/xsearch)
 
-A pi extension that adds an `xsearch` tool powered by xAI Grok `x_search`.
+A pi extension that adds an API-key based `xsearch` tool powered by xAI Grok `x_search`.
+
+> Prefer [@pi-lab/grok-build](../grok-build) for most X/Twitter tasks if the local Grok Build CLI is installed and authenticated. Grok Build can search X and read post/thread links with richer context, but its native X search usually returns about 10 posts per search call. `xsearch` is still useful for broader API-key based searches that need more posts or many citation URLs.
 
 ## Install
 
@@ -19,13 +21,13 @@ pi
 
 You can also provide `XAI_API_KEY` through [@pi-lab/env](https://www.npmjs.com/package/@pi-lab/env).
 
-Once installed and configured, ask pi to search X/Twitter. For example:
+Once installed and configured, ask pi to search X/Twitter through the xAI API. For example:
 
 ```text
 Search X for what people are saying about the latest Grok release.
 ```
 
-The tool returns Grok's answer plus X citation URLs. It is not a raw tweet API and does not guarantee original post objects.
+The tool returns Grok's answer plus X citation URLs. It is not a raw tweet API and does not guarantee original post objects. For richer post/thread reading, replies, quotes, media details, views, or bookmarks, prefer `grok_build`.
 
 ## Settings
 
