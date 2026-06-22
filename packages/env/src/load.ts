@@ -1,12 +1,16 @@
 import { parse } from "@dotenvx/dotenvx";
 
-import { getGlobalEnvPath, readGlobalEnvFile } from "./config";
+import { getGlobalEnvPath, readGlobalEnvFile, type SettingsEnv } from "./config";
 
 export interface LoadResult {
   path: string;
   exists: boolean;
   loadedKeys: string[];
   skippedKeys: string[];
+}
+
+export interface LoadGlobalEnvOptions {
+  settingsEnv?: SettingsEnv;
 }
 
 const DISPLAY_PATH = "~/.pi/agent/.env";
@@ -36,27 +40,29 @@ export function mergeEnv(
 export function loadGlobalEnv(
   target: NodeJS.ProcessEnv = process.env,
   filePath = getGlobalEnvPath(),
+  options: LoadGlobalEnvOptions = {},
 ): LoadResult {
   try {
+    const settingsResult = mergeEnv(options.settingsEnv ?? {}, target);
     const envFile = readGlobalEnvFile(filePath);
 
     if (!envFile.exists || envFile.content === undefined) {
       return {
         path: envFile.path,
         exists: false,
-        loadedKeys: [],
-        skippedKeys: [],
+        loadedKeys: settingsResult.loadedKeys,
+        skippedKeys: settingsResult.skippedKeys,
       };
     }
 
     const parsed = parse(envFile.content, { processEnv: {} });
-    const { loadedKeys, skippedKeys } = mergeEnv(parsed, target);
+    const fileResult = mergeEnv(parsed, target);
 
     return {
       path: envFile.path,
       exists: true,
-      loadedKeys,
-      skippedKeys,
+      loadedKeys: [...settingsResult.loadedKeys, ...fileResult.loadedKeys],
+      skippedKeys: [...settingsResult.skippedKeys, ...fileResult.skippedKeys],
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
