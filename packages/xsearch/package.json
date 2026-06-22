@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/xsearch",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "xAI-powered X search tool extension for pi coding agent",
   "keywords": [
     "pi-package"

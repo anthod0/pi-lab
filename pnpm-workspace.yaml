@@ -1,20 +1,20 @@
 packages:
   - packages/*
 catalog:
-  '@dotenvx/dotenvx': ^1.61.5
-  '@earendil-works/pi-coding-agent': ^0.74.0
-  '@earendil-works/pi-tui': ^0.74.0
-  '@mozilla/readability': ^0.5.0
+  '@dotenvx/dotenvx': ^1.75.1
+  '@earendil-works/pi-coding-agent': ^0.79.9
+  '@earendil-works/pi-tui': ^0.79.9
+  '@mozilla/readability': ^0.6.0
   '@sinclair/typebox': ^0.34.49
   '@types/mozilla__readability': ^0.4.0
-  '@types/node': ^25.6.0
+  '@types/node': ^25.9.4
   '@types/turndown': ^5.0.6
-  fflate: ^0.8.2
+  fflate: ^0.8.3
   linkedom: ^0.18.10
-  lru-cache: ^11.0.0
+  lru-cache: ^11.5.1
   minimatch: ^10.2.5
-  tsdown: ^0.21.9
-  tsx: ^4.21.0
+  tsdown: ^0.22.3
+  tsx: ^4.22.4
   turndown: ^7.2.0
   typescript: ^6.0.3
 
