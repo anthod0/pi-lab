@@ -14,7 +14,7 @@ import { registerWebFetchTool } from "./tool.js";
  * - Mozilla Readability for HTML → Markdown extraction
  * - Inline script index — use `script=N` to read a specific inline script
  * - LRU cache (50 MB, 15 min TTL) keyed on normalized URL
- * - Built-in fetch optimizations (enabled by default), including Reddit URL rewrite
+ * - Built-in fetch optimizations (enabled by default), including X/Twitter post extraction
  * - Pagination via offset/max_length parameters
  */
 export default function (pi: ExtensionAPI) {

@@ -21,30 +21,6 @@ test("loadWebFetchConfig reads simple settings boolean", () => {
 	assert.equal(loadWebFetchConfig({ webfetch: { optimizations: true } }).optimizations, true);
 });
 
-test("reddit links are rewritten to old.reddit.com when optimizations are enabled", () => {
-	const result = applyFetchOptimizations(
-		"https://www.reddit.com/r/pi/comments/abc/example/?sort=top",
-		mergeConfig(),
-	);
-
-	assert.equal(
-		result.url,
-		"https://old.reddit.com/r/pi/comments/abc/example/?sort=top",
-	);
-	assert.equal(result.optimizerId, "reddit");
-});
-
-test("reddit links are not rewritten when optimizations are disabled", () => {
-	const originalUrl = "https://www.reddit.com/r/pi/comments/abc/example/?sort=top";
-	const result = applyFetchOptimizations(
-		originalUrl,
-		mergeConfig({ optimizations: false }),
-	);
-
-	assert.equal(result.url, originalUrl);
-	assert.equal(result.optimizerId, undefined);
-});
-
 test("x html optimizer extracts tweet content from INITIAL_STATE script", async () => {
 	const state = {
 		entities: {

@@ -1,6 +1,5 @@
 import type { WebFetchConfig } from "../config.js";
 import { normalizeUrl } from "../normalize.js";
-import { redditOptimizer } from "./reddit.js";
 import { xOptimizer } from "./x.js";
 import type {
 	FetchOptimizationResult,
@@ -8,7 +7,7 @@ import type {
 	ProcessHtmlWithOptimizationsInput,
 } from "./types.js";
 
-const BUILT_IN_OPTIMIZERS: FetchOptimizer[] = [redditOptimizer, xOptimizer];
+const BUILT_IN_OPTIMIZERS: FetchOptimizer[] = [xOptimizer];
 
 function findOptimizer(url: string, config: WebFetchConfig): FetchOptimizer | undefined {
 	if (!config.optimizations) return undefined;
