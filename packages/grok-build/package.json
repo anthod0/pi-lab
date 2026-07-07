@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/grok-build",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Grok Build CLI tool extension for pi coding agent",
   "keywords": [
     "pi-package"
