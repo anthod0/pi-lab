@@ -55,8 +55,8 @@ function setup(config?: unknown) {
 		async start() {
 			await eventHandlers.session_start({ type: "session_start" }, { cwd });
 		},
-		async agentEnd() {
-			await eventHandlers.agent_end({ type: "agent_end", messages: [] }, { cwd });
+		async agentSettled() {
+			await eventHandlers.agent_settled({ type: "agent_settled", messages: [] }, { cwd });
 		},
 		permissionAsk(toolName = "bash", toolCallId = "call-1") {
 			busHandlers["permissions:ask"]({ toolName, toolCallId, rule: {}, options: [] });
@@ -64,11 +64,11 @@ function setup(config?: unknown) {
 	};
 }
 
-test("agent_end sends fixed default notification", async () => {
+test("agent_settled sends fixed default notification", async () => {
 	const app = setup();
 	await app.start();
 
-	await app.agentEnd();
+	await app.agentSettled();
 
 	assert.deepEqual(app.sent, [{ title: "Pi", message: "Ready for input" }]);
 });
@@ -86,7 +86,7 @@ test("enable false disables default notifications but keeps script hook", async 
 	const app = setup({ notify: { enable: false, script: "./notify.sh" } });
 	await app.start();
 
-	await app.agentEnd();
+	await app.agentSettled();
 	app.permissionAsk("bash", "ask-call");
 
 	assert.deepEqual(app.sent, []);
@@ -102,12 +102,12 @@ test("enable false disables default notifications but keeps script hook", async 
 		})),
 		[
 			{
-				event: "agent_end",
+				event: "agent_settled",
 				title: "Pi",
 				message: "Ready for input",
 				cwd: app.cwd,
 				pid: process.pid,
-				notificationIdPrefix: "pi-agent-end",
+				notificationIdPrefix: "pi-agent-settled",
 			},
 			{
 				event: "permission_ask",
@@ -131,7 +131,7 @@ test("script payload includes terminal context", async () => {
 	const app = setup({ notify: { script: "./notify.sh" } });
 	await app.start();
 
-	await app.agentEnd();
+	await app.agentSettled();
 
 	const payload = app.scripts[0] as any;
 	assert.deepEqual(payload.terminal, {
@@ -173,7 +173,7 @@ test("script hook errors are warned and do not stop notifications", async () => 
 	});
 	await eventHandlers.session_start({ type: "session_start" }, { cwd });
 
-	await eventHandlers.agent_end({ type: "agent_end", messages: [] }, { cwd });
+	await eventHandlers.agent_settled({ type: "agent_settled", messages: [] }, { cwd });
 
 	assert.deepEqual(sent, [{ title: "Pi", message: "Ready for input" }]);
 	assert.equal(warnings.length, 1);

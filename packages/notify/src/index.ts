@@ -17,7 +17,7 @@ type NotifyDeps = {
 };
 
 const TITLE = "Pi" as const;
-const AGENT_END_MESSAGE = "Ready for input";
+const AGENT_SETTLED_MESSAGE = "Ready for input";
 
 export default function (pi: ExtensionAPI, deps: NotifyDeps = {}) {
 	let config: NotifyConfig = { enable: true };
@@ -32,8 +32,8 @@ export default function (pi: ExtensionAPI, deps: NotifyDeps = {}) {
 		config = loadConfig(ctx.cwd, deps.home);
 	});
 
-	pi.on("agent_end", async () => {
-		await handleNotify(createPayload("agent_end", AGENT_END_MESSAGE));
+	pi.on("agent_settled", async () => {
+		await handleNotify(createPayload("agent_settled", AGENT_SETTLED_MESSAGE));
 	});
 
 	pi.events.on("permissions:ask", (data: unknown) => {
@@ -46,7 +46,7 @@ export default function (pi: ExtensionAPI, deps: NotifyDeps = {}) {
 		const timestamp = Date.now();
 		return {
 			event,
-			notificationId: `${event === "agent_end" ? "pi-agent-end" : "pi-permission-ask"}-${timestamp}`,
+			notificationId: `${event === "agent_settled" ? "pi-agent-settled" : "pi-permission-ask"}-${timestamp}`,
 			title: TITLE,
 			message,
 			timestamp,

@@ -12,7 +12,7 @@ pi install npm:@pi-lab/notify
 
 This extension sends a desktop notification for two events:
 
-- `agent_end` — title `Pi`, message `Ready for input`
+- `agent_settled` — title `Pi`, message `Ready for input`
 - `permissions:ask` — title `Pi`, message `Permission required: <toolName>`
 
 `permissions:ask` is emitted by [`@pi-lab/permissions`](https://www.npmjs.com/package/@pi-lab/permissions) immediately before a permission prompt is shown.
@@ -60,12 +60,12 @@ Local config overrides global config.
 
 When configured, the script is executed for every notify event in addition to the built-in notification. The script receives a JSON payload on stdin and has a fixed 5 second timeout. Failures are warned in Pi and do not affect agent execution or permission prompts.
 
-Example payload for `agent_end`:
+Example payload for `agent_settled`:
 
 ```json
 {
-  "event": "agent_end",
-  "notificationId": "pi-agent-end-1778220000000",
+  "event": "agent_settled",
+  "notificationId": "pi-agent-settled-1778220000000",
   "title": "Pi",
   "message": "Ready for input",
   "timestamp": 1778220000000,

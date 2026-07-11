@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 
 export type NotifyPayload = {
-	event: "agent_end" | "permission_ask";
+	event: "agent_settled" | "permission_ask";
 	notificationId: string;
 	title: "Pi";
 	message: string;
