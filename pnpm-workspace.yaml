@@ -1,6 +1,8 @@
 packages:
   - packages/*
 catalog:
+  '@aws-sdk/client-ssm': ^3.1095.0
+  '@aws-sdk/credential-providers': ^3.1095.0
   '@dotenvx/dotenvx': ^2.1.5
   '@earendil-works/pi-coding-agent': ^0.80.6
   '@earendil-works/pi-tui': ^0.80.3
