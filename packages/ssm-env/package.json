@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/ssm-env",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "AWS SSM Parameter Store environment loader extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -41,6 +41,6 @@
     "tsx": "catalog:"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "catalog:"
+    "@earendil-works/pi-coding-agent": "catalog:peer"
   }
 }

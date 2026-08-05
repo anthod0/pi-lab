@@ -20,4 +20,9 @@ catalog:
   turndown: ^7.2.0
   typescript: ^6.0.3
 
+catalogs:
+  peer:
+    '@earendil-works/pi-coding-agent': '>=0.80.3 <1'
+    '@earendil-works/pi-tui': '>=0.80.3 <1'
+
 catalogMode: prefer

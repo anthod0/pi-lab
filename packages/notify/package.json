@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/notify",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Desktop notification extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -37,6 +37,6 @@
     "tsx": "catalog:"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "catalog:"
+    "@earendil-works/pi-coding-agent": "catalog:peer"
   }
 }

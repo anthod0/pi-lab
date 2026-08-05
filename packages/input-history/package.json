@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/input-history",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Cross-session input history navigation for pi coding agent",
   "keywords": [
     "pi-package"
@@ -36,6 +36,6 @@
     "tsdown": "catalog:"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "catalog:"
+    "@earendil-works/pi-coding-agent": "catalog:peer"
   }
 }
