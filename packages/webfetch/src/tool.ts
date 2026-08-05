@@ -8,7 +8,11 @@ import { fetchUrl } from "./fetch.js";
 import { processHtml, processPlainText } from "./content.js";
 import type { InlineScript } from "./content.js";
 import { getBinaryTempDir } from "./paths.js";
-import { applyFetchOptimizations, processHtmlWithOptimizations } from "./optimizers/index.js";
+import {
+	applyFetchOptimizations,
+	fetchWithOptimizations,
+	processHtmlWithOptimizations,
+} from "./optimizers/index.js";
 
 // ─── Output shapes ────────────────────────────────────────────────────────────
 
@@ -160,12 +164,13 @@ export function registerWebFetchTool(pi: ExtensionAPI, config: WebFetchConfig): 
 
 			const optimization = applyFetchOptimizations(normalizedUrl, config);
 			normalizedUrl = optimization.url;
+			const cacheKey = optimization.cacheKey;
 
 			// Temp directory for binary downloads
 			const tempDir = getBinaryTempDir();
 
 			// ── Check cache ─────────────────────────────────────────────────
-			let entry = cache.get(normalizedUrl);
+			let entry = cache.get(cacheKey);
 
 			if (!entry) {
 				onUpdate?.({
@@ -173,57 +178,69 @@ export function registerWebFetchTool(pi: ExtensionAPI, config: WebFetchConfig): 
 					details: {},
 				});
 
-				const result = await fetchUrl(normalizedUrl, tempDir, signal);
-
-				// ── Redirect ──────────────────────────────────────────────────
-				if (result.type === "redirect") {
-					const output: RedirectOutput = {
-						redirect: true,
-						original_url: result.originalUrl,
-						redirect_url: result.redirectUrl,
-						status_code: result.statusCode,
-						message:
-							"This URL redirects to a different domain. " +
-							"Call webfetch again with `redirect_url` to fetch the content.",
+				const optimized = await fetchWithOptimizations(normalizedUrl, config, signal);
+				if (optimized) {
+					entry = {
+						markdown: optimized.markdown,
+						scripts: optimized.scripts,
+						url: optimized.url,
 					};
-					return {
-						content: [{ type: "text", text: formatRedirectResult(output) }],
-						details: output,
-					};
+					cache.set(cacheKey, entry, optimized.ttlMs);
 				}
 
-				// ── Binary ────────────────────────────────────────────────────
-				if (result.type === "binary") {
-					const output: BinaryOutput = {
-						file_path: result.filePath,
-						content_type: result.contentType,
-						url: result.url,
-					};
-					return {
-						content: [{ type: "text", text: formatBinaryResult(output) }],
-						details: output,
-					};
-				}
+				if (!entry) {
+					const result = await fetchUrl(normalizedUrl, tempDir, signal);
 
-				// ── Process text content ──────────────────────────────────────
-				onUpdate?.({
-					content: [{ type: "text", text: "Processing content…" }],
-					details: {},
-				});
+					// ── Redirect ──────────────────────────────────────────────
+					if (result.type === "redirect") {
+						const output: RedirectOutput = {
+							redirect: true,
+							original_url: result.originalUrl,
+							redirect_url: result.redirectUrl,
+							status_code: result.statusCode,
+							message:
+								"This URL redirects to a different domain. " +
+								"Call webfetch again with `redirect_url` to fetch the content.",
+						};
+						return {
+							content: [{ type: "text", text: formatRedirectResult(output) }],
+							details: output,
+						};
+					}
 
-				if (result.contentType === "text/html") {
-					const processed = await processHtmlWithOptimizations({
-						url: normalizedUrl,
-						html: result.content,
-						config,
-						defaultProcess: () => processHtml(result.content, normalizedUrl),
+					// ── Binary ────────────────────────────────────────────────
+					if (result.type === "binary") {
+						const output: BinaryOutput = {
+							file_path: result.filePath,
+							content_type: result.contentType,
+							url: result.url,
+						};
+						return {
+							content: [{ type: "text", text: formatBinaryResult(output) }],
+							details: output,
+						};
+					}
+
+					// ── Process text content ──────────────────────────────────
+					onUpdate?.({
+						content: [{ type: "text", text: "Processing content…" }],
+						details: {},
 					});
-					entry = { markdown: processed.markdown, scripts: processed.scripts };
-				} else {
-					entry = { markdown: processPlainText(result.content), scripts: [] };
-				}
 
-				cache.set(normalizedUrl, entry);
+					if (result.contentType === "text/html") {
+						const processed = await processHtmlWithOptimizations({
+							url: normalizedUrl,
+							html: result.content,
+							config,
+							defaultProcess: () => processHtml(result.content, normalizedUrl),
+						});
+						entry = { markdown: processed.markdown, scripts: processed.scripts, url: result.url };
+					} else {
+						entry = { markdown: processPlainText(result.content), scripts: [], url: result.url };
+					}
+
+					cache.set(cacheKey, entry);
+				}
 			}
 
 			// ── Script read ─────────────────────────────────────────────────
@@ -243,10 +260,10 @@ export function registerWebFetchTool(pi: ExtensionAPI, config: WebFetchConfig): 
 					total_length: total,
 					offset,
 					returned_length: slice.length,
-					url: normalizedUrl,
+					url: entry.url,
 				};
 				return {
-					content: [{ type: "text", text: formatScriptResult(normalizedUrl, scriptIndex, output) }],
+					content: [{ type: "text", text: formatScriptResult(entry.url, scriptIndex, output) }],
 					details: output,
 				};
 			}
@@ -262,7 +279,7 @@ export function registerWebFetchTool(pi: ExtensionAPI, config: WebFetchConfig): 
 				total_length: totalLength,
 				offset,
 				returned_length: slice.length,
-				url: normalizedUrl,
+				url: entry.url,
 			};
 
 			return {

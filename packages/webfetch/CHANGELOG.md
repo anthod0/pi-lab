@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added Reddit permalink optimization using Atom RSS for post bodies and comments, Embed for media and displayed comment counts, and oEmbed as a final metadata fallback.
+- Added textual handling for JSON, Atom, RSS, and XML MIME types.
+
+### Changed
+
+- Reddit results use a canonical post-ID memory cache key with a one-hour TTL to reduce anonymous rate-limit pressure.
+
 ## [1.0.5] - 2026-08-05
 
 ### Fixed

@@ -48,6 +48,19 @@ function isSameDomain(a: string, b: string): boolean {
 	}
 }
 
+const TEXT_CONTENT_TYPES = new Set([
+	"application/atom+xml",
+	"application/json",
+	"application/rss+xml",
+	"application/xml",
+	"text/xml",
+]);
+
+export function isTextContentType(contentType: string): boolean {
+	const baseContentType = contentType.split(";")[0].trim().toLowerCase();
+	return baseContentType.startsWith("text/") || TEXT_CONTENT_TYPES.has(baseContentType);
+}
+
 const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
 	"image/jpeg": ".jpg",
 	"image/png": ".png",
@@ -129,7 +142,7 @@ export async function fetchUrl(
 		const baseContentType = rawContentType.split(";")[0].trim().toLowerCase();
 
 		// ── Text content ──────────────────────────────────────────────────────
-		if (baseContentType.startsWith("text/")) {
+		if (isTextContentType(baseContentType)) {
 			const text = await response.text();
 			return {
 				type: "text",

@@ -36,6 +36,11 @@ export interface ContentProcessResult {
 	method: "readability" | "full-html" | "plain" | "optimized";
 }
 
+/** Convert an HTML fragment to Markdown without applying Readability. */
+export function htmlToMarkdown(html: string): string {
+	return getTurndown().turndown(html).trim();
+}
+
 /**
  * Extract inline <script> elements (no src attribute) from a parsed document.
  * External scripts are skipped — they have no inline content.
@@ -66,8 +71,6 @@ function extractInlineScripts(
  * Also extracts inline scripts as a separate list.
  */
 export async function processHtml(html: string, _url: string): Promise<ContentProcessResult> {
-	const td = getTurndown();
-
 	const { document } = parseHTML(html);
 
 	// Extract inline scripts before Readability mutates the DOM
@@ -85,7 +88,7 @@ export async function processHtml(html: string, _url: string): Promise<ContentPr
 			// Accept if extraction is meaningful (>= 10% of source)
 			if (ratio >= 0.1) {
 				return {
-					markdown: td.turndown(article.content),
+					markdown: htmlToMarkdown(article.content),
 					scripts,
 					method: "readability",
 				};
@@ -97,7 +100,7 @@ export async function processHtml(html: string, _url: string): Promise<ContentPr
 
 	// Fallback: convert full HTML to Markdown
 	return {
-		markdown: td.turndown(html),
+		markdown: htmlToMarkdown(html),
 		scripts,
 		method: "full-html",
 	};

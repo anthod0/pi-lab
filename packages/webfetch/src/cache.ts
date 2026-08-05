@@ -5,6 +5,7 @@ import type { InlineScript } from "./content.js";
 export interface CacheEntry {
 	markdown: string;
 	scripts: InlineScript[];
+	url: string;
 }
 
 export class WebFetchCache {
@@ -30,8 +31,12 @@ export class WebFetchCache {
 		return this.cache.get(key);
 	}
 
-	set(key: string, value: CacheEntry): void {
-		this.cache.set(key, value);
+	set(key: string, value: CacheEntry, ttlMs?: number): void {
+		if (ttlMs === undefined) {
+			this.cache.set(key, value);
+		} else {
+			this.cache.set(key, value, { ttl: ttlMs });
+		}
 	}
 
 	delete(key: string): void {
