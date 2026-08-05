@@ -86,22 +86,31 @@ jobs:
       - name: Build
         run: pnpm --filter "./packages/${{ matrix.package }}" build
 
-      - name: Publish
-        run: pnpm --filter "./packages/${{ matrix.package }}" publish --no-git-checks --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Get version
         id: version
         run: |
           VERSION=$(jq -r '.version' packages/${{ matrix.package }}/package.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Read changelog entry
+        id: changelog
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          path: packages/${{ matrix.package }}/CHANGELOG.md
+          version: ${{ steps.version.outputs.version }}
+          validation_level: error
+
+      - name: Publish
+        run: pnpm --filter "./packages/${{ matrix.package }}" publish --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ matrix.package }}@${{ steps.version.outputs.version }}
           name: "${{ matrix.package }} v${{ steps.version.outputs.version }}"
-          generate_release_notes: true
+          body_path: ${{ steps.changelog.outputs.changes_file }}
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
