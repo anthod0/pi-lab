@@ -30,6 +30,31 @@ export type FetchResult = TextResult | BinaryResult | RedirectResult;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+const TEXT_ACCEPT = "text/markdown, text/plain, text/html, */*";
+
+const NON_PAGE_EXTENSIONS = new Set([
+	// Images
+	".avif", ".bmp", ".gif", ".ico", ".jpeg", ".jpg", ".png", ".svg", ".tif", ".tiff", ".webp",
+	// Video and streaming media
+	".avi", ".m3u8", ".m4v", ".mkv", ".mov", ".mp4", ".mpeg", ".mpg", ".ts", ".webm",
+	// Audio
+	".aac", ".flac", ".m4a", ".mp3", ".oga", ".ogg", ".opus", ".wav", ".weba",
+	// Documents, archives, and other binary downloads
+	".7z", ".bz2", ".doc", ".docx", ".epub", ".gz", ".pdf", ".ppt", ".pptx", ".rar", ".tar",
+	".wasm", ".woff", ".woff2", ".xls", ".xlsx", ".xz", ".zip",
+]);
+
+/**
+ * Prefer an unconstrained response for URLs that look like direct media or
+ * binary downloads. Keep content negotiation for ordinary web pages so sites
+ * that support Markdown can return it directly.
+ */
+export function acceptHeaderForUrl(url: string): string {
+	const pathname = new URL(url).pathname.toLowerCase();
+	const extension = pathname.match(/\.[a-z0-9]+$/)?.[0];
+	return extension && NON_PAGE_EXTENSIONS.has(extension) ? "*/*" : TEXT_ACCEPT;
+}
+
 /**
  * Determine if two URLs are on the same domain.
  * Same domain = same protocol + same port + same hostname (ignoring www prefix).
@@ -99,7 +124,7 @@ export async function fetchUrl(
 			signal,
 			redirect: "manual", // Handle redirects manually
 			headers: {
-				Accept: "text/markdown, text/plain, text/html, */*",
+				Accept: acceptHeaderForUrl(currentUrl),
 				"User-Agent": "pi/webfetch",
 			},
 		});
