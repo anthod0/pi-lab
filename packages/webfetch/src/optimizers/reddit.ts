@@ -4,6 +4,9 @@ import type { FetchOptimizer, OptimizedFetchResult } from "./types.js";
 
 const REDDIT_RSS_CACHE_TTL_MS = 60 * 60 * 1000;
 const REDDIT_FALLBACK_CACHE_TTL_MS = 60 * 1000;
+const MEDIA_EXPIRY_SAFETY_MS = 60 * 1000;
+const MAX_PACKAGED_MEDIA_JSON_LENGTH = 1024 * 1024;
+const MAX_VIDEO_DIMENSION = 16_384;
 const USER_AGENT = "Mozilla/5.0 (compatible; pi-webfetch/1.0)";
 
 export interface RedditPostUrl {
@@ -37,11 +40,21 @@ interface RedditRssData {
 	comments: RedditEntry[];
 }
 
+interface RedditVideo {
+	downloadUrl?: string;
+	width?: number;
+	height?: number;
+	durationSeconds?: number;
+	hlsUrl?: string;
+	expiresAt?: number;
+}
+
 interface RedditEmbedData {
 	title?: string;
 	author?: string;
 	displayedCommentCount?: number;
 	media: RedditMedia[];
+	video?: RedditVideo;
 }
 
 interface RedditOEmbedData {
@@ -176,7 +189,137 @@ function preferredImageUrl(image: Element): string | undefined {
 	return cleanText(image.getAttribute("src"));
 }
 
-export function parseRedditEmbed(html: string): RedditEmbedData | undefined {
+function validVideoDimension(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isInteger(value) && value > 0 && value <= MAX_VIDEO_DIMENSION
+		? value
+		: undefined;
+}
+
+function parseUnixExpiry(value: string | null): number | undefined {
+	if (!value || !/^\d{10}$/.test(value)) return undefined;
+	const seconds = Number(value);
+	return Number.isSafeInteger(seconds) && seconds >= 1_000_000_000 ? seconds * 1000 : undefined;
+}
+
+export function parseRedditVideoExpiry(url: string): number | undefined {
+	try {
+		const parsed = new URL(url);
+		if (parsed.hostname.toLowerCase() === "packaged-media.redd.it") {
+			return parseUnixExpiry(parsed.searchParams.get("e"));
+		}
+		if (parsed.hostname.toLowerCase() === "v.redd.it") {
+			return parseUnixExpiry(parsed.searchParams.get("a")?.split(",", 1)[0] ?? null);
+		}
+	} catch {
+		// Invalid media URLs have no usable expiry.
+	}
+	return undefined;
+}
+
+function parseTrustedMediaUrl(rawUrl: unknown, hostname: string, extension: string): string | undefined {
+	if (typeof rawUrl !== "string" || /[\u0000-\u001f\u007f]/.test(rawUrl)) return undefined;
+	try {
+		const url = new URL(rawUrl);
+		if (
+			url.protocol !== "https:"
+			|| url.hostname.toLowerCase() !== hostname
+			|| url.username
+			|| url.password
+			|| !url.pathname.toLowerCase().endsWith(extension)
+		) return undefined;
+		return rawUrl;
+	} catch {
+		return undefined;
+	}
+}
+
+function isFreshMediaUrl(url: string, now: number): boolean {
+	const expiresAt = parseRedditVideoExpiry(url);
+	return expiresAt === undefined || expiresAt - now > MEDIA_EXPIRY_SAFETY_MS;
+}
+
+function focalRedditPlayer(document: Document, postId?: string): Element | undefined {
+	const players = Array.from(document.querySelectorAll("shreddit-player"));
+	if (postId) {
+		const expected = `t3_${postId.toLowerCase()}`;
+		const matching = players.find((player) => cleanText(player.getAttribute("post-id"))?.toLowerCase() === expected);
+		if (matching) return matching;
+	}
+	if (players.length !== 1) return undefined;
+	const player = players[0];
+	const playerPostId = cleanText(player?.getAttribute("post-id"))?.toLowerCase();
+	if (postId && playerPostId && playerPostId !== `t3_${postId.toLowerCase()}`) return undefined;
+	return player;
+}
+
+function parseRedditPackagedVideo(player: Element, now: number): RedditVideo | undefined {
+	const packagedJson = player.getAttribute("packaged-media-json");
+	let playbackMp4s: Record<string, unknown> | undefined;
+	if (packagedJson && packagedJson.length <= MAX_PACKAGED_MEDIA_JSON_LENGTH) {
+		try {
+			const root = JSON.parse(packagedJson) as unknown;
+			if (root && typeof root === "object") {
+				const playback = (root as Record<string, unknown>).playbackMp4s;
+				if (playback && typeof playback === "object") playbackMp4s = playback as Record<string, unknown>;
+			}
+		} catch {
+			// Video enrichment is best effort; image and post parsing continue below.
+		}
+	}
+
+	const candidates: Array<RedditVideo & { index: number }> = [];
+	const permutations = playbackMp4s?.permutations;
+	if (Array.isArray(permutations)) {
+		for (const [index, permutation] of permutations.entries()) {
+			if (!permutation || typeof permutation !== "object") continue;
+			const source = (permutation as Record<string, unknown>).source;
+			if (!source || typeof source !== "object") continue;
+			const sourceData = source as Record<string, unknown>;
+			const downloadUrl = parseTrustedMediaUrl(sourceData.url, "packaged-media.redd.it", ".mp4");
+			if (!downloadUrl || !isFreshMediaUrl(downloadUrl, now)) continue;
+			const dimensions = sourceData.dimensions;
+			if (dimensions !== undefined && (!dimensions || typeof dimensions !== "object" || Array.isArray(dimensions))) continue;
+			const dimensionsData = dimensions as Record<string, unknown> | undefined;
+			const width = validVideoDimension(dimensionsData?.width);
+			const height = validVideoDimension(dimensionsData?.height);
+			if ((dimensionsData?.width !== undefined && width === undefined) || (dimensionsData?.height !== undefined && height === undefined)) continue;
+			candidates.push({
+				downloadUrl,
+				width,
+				height,
+				expiresAt: parseRedditVideoExpiry(downloadUrl),
+				index,
+			});
+		}
+	}
+	candidates.sort((a, b) => {
+		const areaDifference = (b.width ?? 0) * (b.height ?? 0) - (a.width ?? 0) * (a.height ?? 0);
+		return areaDifference || (b.width ?? 0) - (a.width ?? 0) || a.index - b.index;
+	});
+
+	const playerHls = cleanText(player.getAttribute("src"));
+	const sourceHls = cleanText(player.querySelector("source")?.getAttribute("src"));
+	const hlsUrl = [playerHls, sourceHls]
+		.map((url) => parseTrustedMediaUrl(url, "v.redd.it", ".m3u8"))
+		.find((url): url is string => Boolean(url && isFreshMediaUrl(url, now)));
+	const preferred = candidates[0];
+	if (!preferred && !hlsUrl) return undefined;
+
+	const duration = playbackMp4s?.duration;
+	const durationSeconds = typeof duration === "number" && Number.isFinite(duration) && duration >= 0 ? duration : undefined;
+	const expiries = [preferred?.expiresAt, hlsUrl ? parseRedditVideoExpiry(hlsUrl) : undefined]
+		.filter((expiry): expiry is number => expiry !== undefined);
+	return {
+		downloadUrl: preferred?.downloadUrl,
+		width: preferred?.width,
+		height: preferred?.height,
+		durationSeconds,
+		hlsUrl,
+		expiresAt: expiries.length > 0 ? Math.min(...expiries) : undefined,
+	};
+}
+
+export function parseRedditEmbed(html: string, postId?: string, now = Date.now()): RedditEmbedData | undefined {
 	const { document } = parseHTML(html);
 	const title = cleanText(document.querySelector("#embed-title")?.textContent);
 	const authorLink = document.querySelector('a[href*="/user/"]');
@@ -201,8 +344,10 @@ export function parseRedditEmbed(html: string): RedditEmbedData | undefined {
 		media.push({ url, alt: cleanText(image.getAttribute("alt")) });
 	}
 
-	if (!title && !author && media.length === 0 && displayedCommentCount === undefined) return undefined;
-	return { title, author, displayedCommentCount, media };
+	const player = focalRedditPlayer(document, postId);
+	const video = player ? parseRedditPackagedVideo(player, now) : undefined;
+	if (!title && !author && media.length === 0 && displayedCommentCount === undefined && !video) return undefined;
+	return { title, author, displayedCommentCount, media, video };
 }
 
 function parseOEmbed(json: string): RedditOEmbedData | undefined {
@@ -255,6 +400,18 @@ function mergeMedia(...groups: RedditMedia[][]): RedditMedia[] {
 	return result;
 }
 
+function renderRedditVideo(video: RedditVideo): string[] {
+	const lines: string[] = [];
+	if (video.downloadUrl) {
+		const dimensions = video.width && video.height ? `, ${video.width}×${video.height}` : "";
+		lines.push(`- [Download video (MP4${dimensions})](${video.downloadUrl})`);
+	}
+	if (video.hlsUrl && video.hlsUrl !== video.downloadUrl) {
+		lines.push(`- [Adaptive video stream (HLS)](${video.hlsUrl})`);
+	}
+	return lines;
+}
+
 function renderRedditMarkdown(
 	url: RedditPostUrl,
 	rss: RedditRssData | undefined,
@@ -297,9 +454,13 @@ function renderRedditMarkdown(
 
 	lines.push("", "## Post", "", post?.bodyMarkdown || "Post body unavailable from the accessible Reddit endpoints.");
 
-	if (media.length > 0) {
-		lines.push("", "## Media", "");
-		for (const item of media) lines.push(`- ${item.alt ? `[${item.alt}](${item.url})` : item.url}`);
+	const videoLines = embed?.video ? renderRedditVideo(embed.video) : [];
+	if (videoLines.length > 0 || media.length > 0) {
+		lines.push("", "## Media", "", ...videoLines);
+		const videoUrls = new Set([embed?.video?.downloadUrl, embed?.video?.hlsUrl].filter(Boolean));
+		for (const item of media) {
+			if (!videoUrls.has(item.url)) lines.push(`- ${item.alt ? `[${item.alt}](${item.url})` : item.url}`);
+		}
 	}
 
 	if (rss) {
@@ -320,6 +481,7 @@ export async function fetchRedditPost(
 	rawUrl: string,
 	signal?: AbortSignal,
 	fetcher: typeof fetch = fetch,
+	now = Date.now(),
 ): Promise<OptimizedFetchResult> {
 	const url = parseRedditPostUrl(rawUrl);
 	if (!url) throw new Error(`Not a supported Reddit post URL: ${rawUrl}`);
@@ -330,7 +492,7 @@ export async function fetchRedditPost(
 	// Embed is complementary to RSS (gallery media and displayed comment count),
 	// and is also the immediate fallback when anonymous RSS is rate limited.
 	const embedAttempt = await fetchText(url.embedUrl, signal, fetcher);
-	const embed = embedAttempt.ok ? parseRedditEmbed(embedAttempt.body) : undefined;
+	const embed = embedAttempt.ok ? parseRedditEmbed(embedAttempt.body, url.postId, now) : undefined;
 
 	let oembed: RedditOEmbedData | undefined;
 	let oembedAttempt: FetchAttempt | undefined;
@@ -348,12 +510,16 @@ export async function fetchRedditPost(
 		throw new Error(`Unable to fetch Reddit post ${url.postId} (${summaries.join("; ")})`);
 	}
 
+	const baseTtlMs = rss ? REDDIT_RSS_CACHE_TTL_MS : REDDIT_FALLBACK_CACHE_TTL_MS;
+	const mediaTtlMs = embed?.video?.expiresAt === undefined
+		? undefined
+		: embed.video.expiresAt - now - MEDIA_EXPIRY_SAFETY_MS;
 	return {
 		url: url.permalink,
 		markdown: renderRedditMarkdown(url, rss, embed, oembed, rssAttempt),
 		scripts: [],
 		method: "optimized",
-		ttlMs: rss ? REDDIT_RSS_CACHE_TTL_MS : REDDIT_FALLBACK_CACHE_TTL_MS,
+		ttlMs: mediaTtlMs === undefined ? baseTtlMs : Math.min(baseTtlMs, mediaTtlMs),
 	};
 }
 
