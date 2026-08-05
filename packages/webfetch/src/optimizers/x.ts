@@ -39,6 +39,366 @@ function extractStatusId(url: string): string | undefined {
 	}
 }
 
+interface JsStringToken {
+	value: string;
+	end: number;
+}
+
+interface ObjectRange {
+	start: number;
+	end: number;
+}
+
+type DirectPropertyValue =
+	| { type: "string"; value: string }
+	| { type: "number"; value: number }
+	| ({ type: "object" } & ObjectRange);
+
+interface XDirectVideo {
+	type: "video" | "gif";
+	url: string;
+	thumbnailUrl?: string;
+	durationMillis?: number;
+	width?: number;
+	height?: number;
+	source: "json-ld";
+}
+
+function readJsString(source: string, start: number): JsStringToken | undefined {
+	const quote = source[start];
+	if (quote !== '"' && quote !== "'" && quote !== "`") return undefined;
+
+	let value = "";
+	for (let i = start + 1; i < source.length; i++) {
+		const char = source[i];
+		if (char === quote) return { value, end: i + 1 };
+		if (char !== "\\") {
+			value += char;
+			continue;
+		}
+
+		const escaped = source[++i];
+		if (escaped === undefined) return undefined;
+		const simpleEscapes: Record<string, string> = {
+			b: "\b",
+			f: "\f",
+			n: "\n",
+			r: "\r",
+			t: "\t",
+			v: "\v",
+			"0": "\0",
+		};
+		if (escaped in simpleEscapes) {
+			value += simpleEscapes[escaped];
+			continue;
+		}
+		if (escaped === "\n") continue;
+		if (escaped === "\r") {
+			if (source[i + 1] === "\n") i++;
+			continue;
+		}
+		if (escaped === "x") {
+			const hex = source.slice(i + 1, i + 3);
+			if (!/^[0-9a-f]{2}$/i.test(hex)) return undefined;
+			value += String.fromCodePoint(Number.parseInt(hex, 16));
+			i += 2;
+			continue;
+		}
+		if (escaped === "u") {
+			if (source[i + 1] === "{") {
+				const close = source.indexOf("}", i + 2);
+				if (close === -1) return undefined;
+				const hex = source.slice(i + 2, close);
+				if (!/^[0-9a-f]{1,6}$/i.test(hex)) return undefined;
+				const codePoint = Number.parseInt(hex, 16);
+				if (codePoint > 0x10ffff) return undefined;
+				value += String.fromCodePoint(codePoint);
+				i = close;
+				continue;
+			}
+			const hex = source.slice(i + 1, i + 5);
+			if (!/^[0-9a-f]{4}$/i.test(hex)) return undefined;
+			value += String.fromCharCode(Number.parseInt(hex, 16));
+			i += 4;
+			continue;
+		}
+		value += escaped;
+	}
+	return undefined;
+}
+
+function skipTrivia(source: string, start: number, limit = source.length): number {
+	let i = start;
+	while (i < limit) {
+		if (/\s/.test(source[i] ?? "")) {
+			i++;
+			continue;
+		}
+		if (source.startsWith("//", i)) {
+			const newline = source.indexOf("\n", i + 2);
+			return newline === -1 || newline >= limit ? limit : skipTrivia(source, newline + 1, limit);
+		}
+		if (source.startsWith("/*", i)) {
+			const close = source.indexOf("*/", i + 2);
+			return close === -1 || close + 2 > limit ? limit : skipTrivia(source, close + 2, limit);
+		}
+		break;
+	}
+	return i;
+}
+
+function scanBalanced(source: string, start: number): ObjectRange | undefined {
+	const pairs: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
+	const first = source[start];
+	if (!first || !(first in pairs)) return undefined;
+	const expected = [pairs[first]];
+
+	for (let i = start + 1; i < source.length; i++) {
+		const char = source[i];
+		if (char === '"' || char === "'" || char === "`") {
+			const token = readJsString(source, i);
+			if (!token) return undefined;
+			i = token.end - 1;
+			continue;
+		}
+		if (source.startsWith("//", i) || source.startsWith("/*", i)) {
+			const next = skipTrivia(source, i);
+			if (next <= i || next >= source.length) return undefined;
+			i = next - 1;
+			continue;
+		}
+		if (char in pairs) {
+			expected.push(pairs[char]);
+			continue;
+		}
+		if (char === "}" || char === "]" || char === ")") {
+			if (expected.pop() !== char) return undefined;
+			if (expected.length === 0) return { start, end: i + 1 };
+		}
+	}
+	return undefined;
+}
+
+function assignedObject(source: string, start: number, limit: number): ObjectRange | undefined {
+	const pairs: Record<string, string> = { "[": "]", "(": ")" };
+	const expected: string[] = [];
+	for (let i = start; i < limit; i++) {
+		const char = source[i];
+		if (char === '"' || char === "'" || char === "`") {
+			const token = readJsString(source, i);
+			if (!token) return undefined;
+			i = token.end - 1;
+			continue;
+		}
+		if (source.startsWith("//", i) || source.startsWith("/*", i)) {
+			const next = skipTrivia(source, i, limit);
+			if (next <= i || next >= limit) return undefined;
+			i = next - 1;
+			continue;
+		}
+		if (char === "{" && expected.length === 0) return scanBalanced(source, i);
+		if (char in pairs) expected.push(pairs[char]);
+		else if (char === "]" || char === ")") {
+			if (expected.pop() !== char) return undefined;
+		} else if (char === "," && expected.length === 0) {
+			return undefined;
+		}
+	}
+	return undefined;
+}
+
+function directProperty(source: string, range: ObjectRange, name: string): DirectPropertyValue | undefined {
+	const closers: string[] = ["}"];
+	const pairs: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
+	let i = range.start + 1;
+
+	while (i < range.end - 1) {
+		i = skipTrivia(source, i, range.end);
+		const char = source[i];
+		let key: string | undefined;
+		let keyEnd = i;
+		if (char === '"' || char === "'" || char === "`") {
+			const token = readJsString(source, i);
+			if (!token) return undefined;
+			if (closers.length === 1) key = token.value;
+			keyEnd = token.end;
+			i = token.end;
+		} else if (char && /[A-Za-z_$]/.test(char)) {
+			const match = source.slice(i, range.end).match(/^[A-Za-z_$][\w$]*/);
+			if (!match) return undefined;
+			if (closers.length === 1) key = match[0];
+			keyEnd = i + match[0].length;
+			i = keyEnd;
+		} else {
+			if (char && char in pairs) closers.push(pairs[char]);
+			else if (char === "}" || char === "]" || char === ")") {
+				if (closers.pop() !== char) return undefined;
+			}
+			i++;
+			continue;
+		}
+
+		if (key !== name) continue;
+		let valueStart = skipTrivia(source, keyEnd, range.end);
+		if (source[valueStart] !== ":") continue;
+		valueStart = skipTrivia(source, valueStart + 1, range.end);
+		const valueChar = source[valueStart];
+		if (valueChar === '"' || valueChar === "'" || valueChar === "`") {
+			const token = readJsString(source, valueStart);
+			return token ? { type: "string", value: token.value } : undefined;
+		}
+		if (valueChar === "{") {
+			const object = scanBalanced(source, valueStart);
+			return object && object.end <= range.end ? { type: "object", ...object } : undefined;
+		}
+		const assigned = assignedObject(source, valueStart, range.end);
+		if (assigned && assigned.end <= range.end) return { type: "object", ...assigned };
+		const numberMatch = source.slice(valueStart, range.end).match(/^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/i);
+		if (numberMatch) {
+			const value = Number(numberMatch[0]);
+			return Number.isFinite(value) ? { type: "number", value } : undefined;
+		}
+		return undefined;
+	}
+	return undefined;
+}
+
+function findSocialPostingRanges(script: string): ObjectRange[] {
+	const ranges: ObjectRange[] = [];
+	const seen = new Set<number>();
+	const delimiters: Array<{ char: string; start: number }> = [];
+	const pairs: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
+
+	for (let i = 0; i < script.length; i++) {
+		const char = script[i];
+		if (char === '"' || char === "'" || char === "`") {
+			const token = readJsString(script, i);
+			if (!token) return ranges;
+			if (token.value === "SocialMediaPosting") {
+				let object: { char: string; start: number } | undefined;
+				for (let j = delimiters.length - 1; j >= 0; j--) {
+					if (delimiters[j]?.char === "{") {
+						object = delimiters[j];
+						break;
+					}
+				}
+				if (object && !seen.has(object.start)) {
+					const range = scanBalanced(script, object.start);
+					if (range) {
+						seen.add(object.start);
+						ranges.push(range);
+					}
+				}
+			}
+			i = token.end - 1;
+			continue;
+		}
+		if (script.startsWith("//", i) || script.startsWith("/*", i)) {
+			const next = skipTrivia(script, i);
+			if (next <= i || next >= script.length) break;
+			i = next - 1;
+			continue;
+		}
+		if (char in pairs) delimiters.push({ char, start: i });
+		else if (char === "}" || char === "]" || char === ")") {
+			const opening = delimiters.pop();
+			if (!opening || pairs[opening.char] !== char) return ranges;
+		}
+	}
+	return ranges;
+}
+
+function propertyString(source: string, range: ObjectRange, name: string): string | undefined {
+	const property = directProperty(source, range, name);
+	return property?.type === "string" ? property.value : undefined;
+}
+
+function propertyNumber(source: string, range: ObjectRange, name: string): number | undefined {
+	const property = directProperty(source, range, name);
+	return property?.type === "number" ? property.value : undefined;
+}
+
+function postingMatchesStatus(script: string, range: ObjectRange, statusId: string): boolean {
+	if (propertyString(script, range, "identifier") === statusId) return true;
+	const id = propertyString(script, range, "@id");
+	if (!id) return false;
+	try {
+		return new URL(id).pathname.match(/\/status(?:es)?\/(\d+)/)?.[1] === statusId;
+	} catch {
+		return false;
+	}
+}
+
+function validVideoUrl(value: string): string | undefined {
+	if (/[\u0000-\u0020\u007f]/.test(value)) return undefined;
+	try {
+		const url = new URL(value);
+		if (url.protocol !== "https:" || url.hostname !== "video.twimg.com") return undefined;
+		if (!url.pathname.toLowerCase().endsWith(".mp4") || url.pathname.toLowerCase().includes("hevc")) return undefined;
+		return value;
+	} catch {
+		return undefined;
+	}
+}
+
+function validThumbnailUrl(value: string | undefined): string | undefined {
+	if (!value || /[\u0000-\u0020\u007f]/.test(value)) return undefined;
+	try {
+		const url = new URL(value);
+		return url.protocol === "https:" && url.hostname === "pbs.twimg.com" ? value : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+function parseDurationMillis(duration: string | undefined): number | undefined {
+	if (!duration) return undefined;
+	const match = duration.match(/^PT(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?$/i);
+	if (!match || !match.slice(1).some(Boolean)) return undefined;
+	const millis = ((Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0)) * 60 + Number(match[3] ?? 0)) * 1000;
+	return Number.isFinite(millis) && millis >= 0 ? Math.round(millis) : undefined;
+}
+
+function extractXDirectVideo(html: string, statusId: string): XDirectVideo | undefined {
+	const { document } = parseHTML(html);
+	for (const element of document.querySelectorAll("script:not([src])")) {
+		const script = element.textContent ?? "";
+		if (!script.includes(statusId) || !script.includes("video.twimg.com")) continue;
+		for (const posting of findSocialPostingRanges(script)) {
+			if (propertyString(script, posting, "@type") !== "SocialMediaPosting") continue;
+			if (!postingMatchesStatus(script, posting, statusId)) continue;
+			const video = directProperty(script, posting, "video");
+			if (video?.type !== "object" || propertyString(script, video, "@type") !== "VideoObject") continue;
+			const url = validVideoUrl(propertyString(script, video, "contentUrl") ?? "");
+			if (!url) continue;
+			return {
+				type: new URL(url).pathname.includes("/tweet_video/") ? "gif" : "video",
+				url,
+				thumbnailUrl: validThumbnailUrl(propertyString(script, video, "thumbnailUrl")),
+				durationMillis: parseDurationMillis(propertyString(script, video, "duration")),
+				width: propertyNumber(script, video, "width"),
+				height: propertyNumber(script, video, "height"),
+				source: "json-ld",
+			};
+		}
+	}
+	return undefined;
+}
+
+function renderDirectMedia(media: XDirectVideo): string {
+	const label = media.type === "gif" ? "GIF" : "Video";
+	const lines = ["## Direct media", "", `- ${label} (MP4): ${media.url}`];
+	if (media.thumbnailUrl) lines.push(`- Thumbnail: ${media.thumbnailUrl}`);
+	if (media.durationMillis !== undefined) lines.push(`- Duration: ${media.durationMillis / 1000} seconds`);
+	if (media.width !== undefined && media.height !== undefined) lines.push(`- Dimensions: ${media.width}×${media.height}`);
+	return lines.join("\n");
+}
+
+function enrichXMarkdown(result: ContentProcessResult, media: XDirectVideo): ContentProcessResult {
+	if (result.markdown.includes(media.url)) return result;
+	return { ...result, markdown: `${result.markdown.trimEnd()}\n\n${renderDirectMedia(media)}` };
+}
+
 function extractInitialStateJson(script: string): string | undefined {
 	const marker = "window.__INITIAL_STATE__=";
 	const start = script.indexOf(marker);
@@ -222,21 +582,31 @@ function renderTweetMarkdown(tweet: Record<string, unknown>, users: Record<strin
 	return lines.join("\n");
 }
 
-function optimizeXHtml({ url, html }: HtmlOptimizationInput): ContentProcessResult | undefined {
+async function optimizeXHtml({ url, html, defaultProcess }: HtmlOptimizationInput): Promise<ContentProcessResult | undefined> {
 	const state = parseInitialState(html);
 	const tweets = entitiesMap(state?.entities?.tweets);
 	const users = entitiesMap(state?.entities?.users);
 	const tweet = selectTweet(tweets, url);
-	if (!tweet) return undefined;
+	if (tweet) {
+		const markdown = renderTweetMarkdown(tweet, users);
+		if (markdown) {
+			return {
+				markdown,
+				scripts: [],
+				method: "optimized",
+			};
+		}
+	}
 
-	const markdown = renderTweetMarkdown(tweet, users);
-	if (!markdown) return undefined;
-
-	return {
-		markdown,
-		scripts: [],
-		method: "optimized",
-	};
+	const statusId = extractStatusId(url);
+	if (!statusId) return undefined;
+	try {
+		const media = extractXDirectVideo(html, statusId);
+		if (!media) return undefined;
+		return enrichXMarkdown(await defaultProcess(), media);
+	} catch {
+		return undefined;
+	}
 }
 
 export const xOptimizer: FetchOptimizer = {

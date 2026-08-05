@@ -108,6 +108,140 @@ test("x html optimizer selects the best downloadable mp4 video variant", async (
 	assert.doesNotMatch(optimized.markdown, /skip\.mp4/);
 });
 
+function xSsrPosting(
+	statusId: string,
+	video?: {
+		contentUrl: string;
+		thumbnailUrl?: string;
+		duration?: string;
+		width?: number;
+		height?: number;
+	},
+): Record<string, unknown> {
+	return {
+		"@type": "SocialMediaPosting",
+		"@id": `https://x.com/i/status/${statusId}`,
+		identifier: statusId,
+		...(video ? { video: { "@type": "VideoObject", ...video } } : {}),
+	};
+}
+
+function xSsrHtml(postings: Record<string, unknown>[], body = "<main><h1>Visible X post</h1><p>Visible reply.</p></main>"): string {
+	const jsonLd = JSON.stringify(postings).replace(/"video":\{/g, "video:$R[24]={");
+	return `<!doctype html><html><head><title>X post</title></head><body>${body}<script>self.$_TSR={headMetadata:{jsonLd:${jsonLd}}};</script></body></html>`;
+}
+
+async function optimizeXFixture(statusId: string, html: string) {
+	const url = `https://x.com/example/status/${statusId}`;
+	return processHtmlWithOptimizations({
+		url,
+		html,
+		config: mergeConfig(),
+		defaultProcess: () => processHtml(html, url),
+	});
+}
+
+test("x html optimizer enriches current SSR video posts and preserves generic extraction", async () => {
+	const html = xSsrHtml([
+		xSsrPosting("2084697125099856216", {
+			contentUrl: "https://video.twimg.com/amplify_video/2084696983319830528/vid/avc1/1280x720/best.mp4?tag=14",
+			thumbnailUrl: "https://pbs.twimg.com/amplify_video_thumb/example/img/example.jpg",
+			duration: "PT38.016S",
+			width: 1280,
+			height: 720,
+		}),
+	]);
+
+	const optimized = await optimizeXFixture("2084697125099856216", html);
+
+	assert.match(optimized.markdown, /Visible X post/);
+	assert.match(optimized.markdown, /Visible reply/);
+	assert.match(optimized.markdown, /## Direct media/);
+	assert.match(optimized.markdown, /Video \(MP4\): https:\/\/video\.twimg\.com\/amplify_video\/.+best\.mp4\?tag=14/);
+	assert.match(optimized.markdown, /Thumbnail: https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/example\/img\/example\.jpg/);
+	assert.match(optimized.markdown, /Duration: 38\.016 seconds/);
+	assert.match(optimized.markdown, /Dimensions: 1280×720/);
+	assert.equal(optimized.scripts.length, 1);
+	assert.match(optimized.scripts[0]?.content ?? "", /self\.\$_TSR/);
+});
+
+test("x SSR optimizer only returns media associated with the focal post", async () => {
+	const html = xSsrHtml([
+		xSsrPosting("999", { contentUrl: "https://video.twimg.com/reply/wrong.mp4" }),
+		xSsrPosting("123", { contentUrl: "https://video.twimg.com/focal/correct.mp4?tag=1" }),
+	]);
+
+	const optimized = await optimizeXFixture("123", html);
+
+	assert.match(optimized.markdown, /https:\/\/video\.twimg\.com\/focal\/correct\.mp4\?tag=1/);
+	assert.doesNotMatch(optimized.markdown, /wrong\.mp4/);
+});
+
+test("x SSR optimizer leaves photo-only and malformed payloads unchanged", async (t) => {
+	await t.test("photo-only", async () => {
+		const body = '<main><h1>Photo post</h1><img src="https://pbs.twimg.com/media/photo.jpg"></main>';
+		const html = xSsrHtml([xSsrPosting("123")], body);
+		const optimized = await optimizeXFixture("123", html);
+		const fallback = await processHtml(html, "https://x.com/example/status/123");
+
+		assert.equal(optimized.markdown, fallback.markdown);
+		assert.doesNotMatch(optimized.markdown, /## Direct media/);
+	});
+
+	await t.test("unterminated object", async () => {
+		const html = '<html><body><main>Fallback content</main><script>self.$_TSR={headMetadata:{jsonLd:[{"@type":"SocialMediaPosting","identifier":"123","video":{"@type":"VideoObject","contentUrl":"https://video.twimg.com/focal/video.mp4"}</script></body></html>';
+		const optimized = await optimizeXFixture("123", html);
+		const fallback = await processHtml(html, "https://x.com/example/status/123");
+
+		assert.equal(optimized.markdown, fallback.markdown);
+	});
+});
+
+test("x SSR optimizer rejects unsafe or unexpected media URLs", async (t) => {
+	for (const [name, contentUrl] of [
+		["http", "http://video.twimg.com/focal/video.mp4"],
+		["wrong host", "https://example.com/focal/video.mp4"],
+		["not mp4", "https://video.twimg.com/focal/playlist.m3u8"],
+		["hevc", "https://video.twimg.com/focal/hevc/video.mp4"],
+		["whitespace", "https://video.twimg.com/focal/video.mp4 bad"],
+	] as const) {
+		await t.test(name, async () => {
+			const html = xSsrHtml([xSsrPosting("123", { contentUrl })]);
+			const optimized = await optimizeXFixture("123", html);
+			assert.doesNotMatch(optimized.markdown, /## Direct media/);
+		});
+	}
+});
+
+test("x SSR optimizer does not duplicate a direct URL already in generic Markdown", async () => {
+	const url = "https://video.twimg.com/focal/video.mp4?tag=7";
+	const html = xSsrHtml([xSsrPosting("123", { contentUrl: url })], `<main><p>Download: ${url}</p></main>`);
+	const optimized = await optimizeXFixture("123", html);
+
+	assert.equal(optimized.markdown.split(url).length - 1, 1);
+	assert.doesNotMatch(optimized.markdown, /## Direct media/);
+});
+
+test("x SSR optimizer labels tweet_video MP4 media as an animated GIF", async () => {
+	const html = xSsrHtml([
+		xSsrPosting("123", { contentUrl: "https://video.twimg.com/tweet_video/example.mp4" }),
+	]);
+	const optimized = await optimizeXFixture("123", html);
+
+	assert.match(optimized.markdown, /GIF \(MP4\): https:\/\/video\.twimg\.com\/tweet_video\/example\.mp4/);
+});
+
+test("x SSR optimizer scans scripts as text without executing JavaScript", async () => {
+	delete (globalThis as { __xOptimizerSideEffect?: boolean }).__xOptimizerSideEffect;
+	const posting = JSON.stringify(xSsrPosting("123", { contentUrl: "https://video.twimg.com/focal/video.mp4" }));
+	const html = `<html><body><main>Post</main><script>globalThis.__xOptimizerSideEffect=true;self.$_TSR={headMetadata:{jsonLd:[${posting}]}};</script></body></html>`;
+
+	const optimized = await optimizeXFixture("123", html);
+
+	assert.match(optimized.markdown, /https:\/\/video\.twimg\.com\/focal\/video\.mp4/);
+	assert.equal((globalThis as { __xOptimizerSideEffect?: boolean }).__xOptimizerSideEffect, undefined);
+});
+
 test("x html optimizer hook falls back to default html processing when INITIAL_STATE is missing", async () => {
 	const html = "<!doctype html><html><head><title>X</title><script>window.__DATA__ = {}</script></head><body><main><h1>Hello X</h1><p>Fallback content.</p></main></body></html>";
 	const optimized = await processHtmlWithOptimizations({
