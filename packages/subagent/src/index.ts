@@ -4,6 +4,7 @@ import { basename } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text, TruncatedText, type Component } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
+import { terminateAllProcessTrees, terminateProcessTree, trackProcessTree } from "./process-tree.js";
 
 const TOOL_NAME = "subagent";
 
@@ -101,8 +102,10 @@ async function runTask(
     cwd,
     env: process.env,
     shell: false,
+    detached: process.platform !== "win32",
     stdio: ["ignore", "pipe", "pipe"],
   });
+  trackProcessTree(child);
 
   let stdoutBuffer = "";
   let stderr = "";
@@ -142,8 +145,11 @@ async function runTask(
     spawnError = error.message;
   });
 
+  let forceKillTimer: ReturnType<typeof setTimeout> | undefined;
   const abort = (): void => {
-    child.kill("SIGTERM");
+    terminateProcessTree(child, "SIGTERM");
+    forceKillTimer = setTimeout(() => terminateProcessTree(child, "SIGKILL"), 1_000);
+    forceKillTimer.unref();
   };
   if (signal?.aborted) abort();
   else signal?.addEventListener("abort", abort, { once: true });
@@ -151,6 +157,7 @@ async function runTask(
   const exitCode = await new Promise<number>((resolve) => {
     child.on("close", (code) => resolve(code ?? 1));
   });
+  if (forceKillTimer) clearTimeout(forceKillTimer);
   signal?.removeEventListener("abort", abort);
   if (stdoutBuffer.trim()) processLine(stdoutBuffer);
 
@@ -171,6 +178,10 @@ function failureMessage(result: TaskResult): string | undefined {
 }
 
 export default function (pi: ExtensionAPI) {
+  pi.on("session_shutdown", async () => {
+    await terminateAllProcessTrees();
+  });
+
   pi.registerTool({
     name: TOOL_NAME,
     label: "Subagent",

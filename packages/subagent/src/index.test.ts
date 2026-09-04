@@ -5,7 +5,11 @@ import registerSubagent from "./index.js";
 
 test("registers only the minimal subagent schema without prompt injection", () => {
   let definition: Record<string, unknown> | undefined;
+  let shutdownHandler: (() => Promise<void>) | undefined;
   const pi = {
+    on(event: string, handler: () => Promise<void>) {
+      if (event === "session_shutdown") shutdownHandler = handler;
+    },
     registerTool(tool: Record<string, unknown>) {
       definition = tool;
     },
@@ -13,6 +17,7 @@ test("registers only the minimal subagent schema without prompt injection", () =
 
   registerSubagent(pi);
 
+  assert.equal(typeof shutdownHandler, "function");
   assert.equal(definition?.name, "subagent");
   assert.equal(definition?.promptSnippet, undefined);
   assert.equal(definition?.promptGuidelines, undefined);
@@ -38,6 +43,7 @@ test("registers only the minimal subagent schema without prompt injection", () =
 test("renders the task inline when collapsed and below the title when expanded", () => {
   let definition: Record<string, unknown> | undefined;
   const pi = {
+    on() {},
     registerTool(tool: Record<string, unknown>) {
       definition = tool;
     },
@@ -78,6 +84,7 @@ test("renders the task inline when collapsed and below the title when expanded",
 test("renders output separately and expands it on demand", () => {
   let definition: Record<string, unknown> | undefined;
   const pi = {
+    on() {},
     registerTool(tool: Record<string, unknown>) {
       definition = tool;
     },
