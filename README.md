@@ -15,7 +15,7 @@ A collection of [pi coding agent](https://github.com/earendil-works/pi) extensio
 | [@pi-lab/ssm-env](./packages/ssm-env)             | Load environment variables from AWS SSM Parameter Store                 | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/ssm-env)](https://www.npmjs.com/package/@pi-lab/ssm-env)             |
 | [@pi-lab/input-history](./packages/input-history) | `↑` recalls inputs across all sessions in the same project              | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/input-history)](https://www.npmjs.com/package/@pi-lab/input-history) |
 | [@pi-lab/notify](./packages/notify)               | Desktop notifications                                                   | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/notify)](https://www.npmjs.com/package/@pi-lab/notify)               |
-| [@pi-lab/subagent](./packages/subagent)           | Run synchronous parallel subagents in headless pi processes             | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/subagent)](https://www.npmjs.com/package/@pi-lab/subagent)           |
+| [@pi-lab/subagent](./packages/subagent)           | A minimal synchronous subagent                                           | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/subagent)](https://www.npmjs.com/package/@pi-lab/subagent)           |
 
 ## Install
 
