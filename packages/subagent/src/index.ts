@@ -5,6 +5,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
+  keyHint,
   truncateHead,
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
@@ -176,13 +177,6 @@ function failureMessage(result: TaskResult): string | undefined {
   return result.errorMessage || result.stderr.trim() || result.output || `Child exited with code ${result.exitCode}`;
 }
 
-function summarizeTask(task: string, maxLength = 72): string {
-  const normalized = task.replace(/\s+/g, " ").trim();
-  const characters = Array.from(normalized);
-  if (characters.length <= maxLength) return normalized;
-  return `${characters.slice(0, maxLength - 1).join("")}…`;
-}
-
 export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: TOOL_NAME,
@@ -204,7 +198,7 @@ export default function (pi: ExtensionAPI) {
         "--no-session",
         "--exclude-tools",
         TOOL_NAME,
-        ctx.isProjectTrusted() ? "--approve" : "--no-approve",
+        "--approve",
         "--thinking",
         pi.getThinkingLevel(),
       ];
@@ -256,11 +250,44 @@ export default function (pi: ExtensionAPI) {
     renderCall(args, theme, context) {
       const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
       const count = args.tasks.length;
-      let content = theme.fg("toolTitle", theme.bold("Subagent "));
+      let content = theme.fg("toolTitle", theme.bold("Input "));
       content += theme.fg("accent", `${count} ${count === 1 ? "task" : "tasks"}`);
 
-      for (const [index, task] of args.tasks.entries()) {
-        content += `\n  ${theme.fg("muted", `${index + 1}.`)} ${theme.fg("dim", summarizeTask(task))}`;
+      if (context.expanded) {
+        for (const [index, task] of args.tasks.entries()) {
+          content += `\n  ${theme.fg("muted", `${index + 1}.`)} ${theme.fg("dim", task)}`;
+        }
+      }
+
+      text.setText(content);
+      return text;
+    },
+
+    renderResult(result, options, theme, context) {
+      const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+      const raw = result.content.find((content) => content.type === "text")?.text ?? "";
+
+      if (options.isPartial) {
+        text.setText(`${theme.fg("toolTitle", theme.bold("Output "))}${theme.fg("muted", raw || "Running…")}`);
+        return text;
+      }
+
+      if (context.isError) {
+        text.setText(`${theme.fg("toolTitle", theme.bold("Output"))}\n${theme.fg("error", raw)}`);
+        return text;
+      }
+
+      const lines = raw.split("\n");
+      const shown = options.expanded ? lines : lines.slice(0, 10);
+      const remaining = lines.length - shown.length;
+      let content = theme.fg("toolTitle", theme.bold("Output"));
+      if (shown.length > 0) {
+        content += `\n${shown.map((line) => theme.fg("toolOutput", line)).join("\n")}`;
+      }
+      if (remaining > 0) {
+        content += theme.fg("muted", `\n… (${remaining} more lines, `);
+        content += keyHint("app.tools.expand", "to expand");
+        content += theme.fg("muted", ")");
       }
 
       text.setText(content);
