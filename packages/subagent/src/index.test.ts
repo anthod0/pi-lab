@@ -40,7 +40,7 @@ test("registers only the minimal subagent schema without prompt injection", () =
   assert.equal(parameters.properties?.task?.type, "string");
 });
 
-test("renders the task inline when collapsed and below the title when expanded", () => {
+test("renders a one-line task summary when collapsed and the full task when expanded", () => {
   let definition: Record<string, unknown> | undefined;
   const pi = {
     on() {},
@@ -59,29 +59,24 @@ test("renders the task inline when collapsed and below the title when expanded",
     },
     context: { expanded: boolean; lastComponent?: unknown },
   ) => { render: (width: number) => string[] };
-  const task = `Review ${"a".repeat(100)} trailing text`;
+  const task = "Review authentication\nReport every security and correctness risk.";
   const theme = {
     fg: (_color: string, text: string) => text,
     bold: (text: string) => text,
   };
   const collapsed = renderCall({ task }, theme, { expanded: false }).render(200).join("\n");
-
-  assert.match(collapsed, new RegExp(`^Subagent ${task}`));
-
   const expanded = renderCall({ task }, theme, { expanded: true }).render(200).join("\n");
 
-  assert.match(expanded, new RegExp(`^Subagent *\\n${task}`));
+  assert.equal(collapsed.trim(), "subagent Review authentication Report every security and correctness risk.");
+  assert.equal(expanded.split("\n")[0]?.trim(), "subagent");
+  assert.match(expanded, /Review authentication\s*\nReport every security and correctness risk\./);
 
-  const narrowCollapsed = renderCall(
-    { task: "Inspect authentication implementation and report every security and correctness risk. ".repeat(4) },
-    theme,
-    { expanded: false },
-  ).render(24);
+  const narrowCollapsed = renderCall({ task }, theme, { expanded: false }).render(24);
   assert.equal(narrowCollapsed.length, 1);
   assert.match(narrowCollapsed[0] ?? "", /\.\.\./);
 });
 
-test("renders output separately and expands it on demand", () => {
+test("hides the output when collapsed and separates it from the input when expanded", () => {
   let definition: Record<string, unknown> | undefined;
   const pi = {
     on() {},
@@ -101,7 +96,6 @@ test("renders output separately and expands it on demand", () => {
     },
     context: { isError: boolean; lastComponent?: unknown },
   ) => { render: (width: number) => string[] };
-  const collapsedOutput = Array.from({ length: 10 }, (_, index) => `line ${index + 1}`).join("\n");
   const expandedOutput = Array.from({ length: 12 }, (_, index) => `line ${index + 1}`).join("\n");
   const theme = {
     fg: (_color: string, text: string) => text,
@@ -109,7 +103,7 @@ test("renders output separately and expands it on demand", () => {
   };
 
   const collapsed = renderResult(
-    { content: [{ type: "text", text: collapsedOutput }] },
+    { content: [{ type: "text", text: expandedOutput }] },
     { expanded: false, isPartial: false },
     theme,
     { isError: false },
@@ -122,7 +116,9 @@ test("renders output separately and expands it on demand", () => {
     theme,
     { isError: false },
   ).render(200).join("\n");
-  assert.match(expanded, /^Result *\n/m);
-  assert.doesNotMatch(expanded, /^Results/m);
+  const expandedLines = expanded.split("\n");
+  assert.equal(expandedLines[0]?.trim(), "");
+  assert.equal(expandedLines[1]?.trim(), "Result");
+  assert.match(expanded, /line 1/);
   assert.match(expanded, /line 12/);
 });

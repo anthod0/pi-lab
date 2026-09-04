@@ -185,7 +185,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: TOOL_NAME,
     label: "Subagent",
-    description: "Run one independent task. Call this tool multiple times in the same response to run tasks concurrently.",
+    description: "Run one independent task.",
     parameters: Type.Object({
       task: Type.String({
         minLength: 1,
@@ -226,9 +226,10 @@ export default function (pi: ExtensionAPI) {
     },
 
     renderCall(args, theme, context) {
-      const title = theme.fg("toolTitle", theme.bold("Subagent"));
+      const title = theme.fg("toolTitle", theme.bold("subagent"));
       if (!context.expanded) {
-        return new TruncatedText(`${title} ${theme.fg("dim", args.task)}`, 0, 0);
+        const summary = args.task.trim().replace(/\s+/g, " ");
+        return new TruncatedText(`${title} ${theme.fg("dim", summary)}`, 0, 0);
       }
 
       const text = context.lastComponent instanceof Text
@@ -239,12 +240,12 @@ export default function (pi: ExtensionAPI) {
     },
 
     renderResult(result, options, theme, context) {
-      const text = context.lastComponent instanceof Text
-        ? context.lastComponent
-        : new Text("", 0, 0);
       const raw = result.content.find((content) => content.type === "text")?.text ?? "";
 
       if (options.isPartial) {
+        const text = context.lastComponent instanceof Text
+          ? context.lastComponent
+          : new Text("", 0, 0);
         const progress = raw ? ` ${raw}` : "…";
         text.setText(`${theme.fg("toolTitle", theme.bold("Running"))}${theme.fg("muted", progress)}`);
         return text;
@@ -252,18 +253,14 @@ export default function (pi: ExtensionAPI) {
 
       if (!options.expanded) return emptyComponent();
 
-      if (context.isError) {
-        text.setText(`${theme.fg("toolTitle", theme.bold("Result"))}\n${theme.fg("error", raw)}`);
-        return text;
-      }
-
-      const lines = raw.split("\n");
-      let content = theme.fg("toolTitle", theme.bold("Result"));
-      if (lines.length > 0) {
-        content += `\n${lines.map((line) => theme.fg("toolOutput", line)).join("\n")}`;
-      }
-
-      text.setText(content);
+      const text = context.lastComponent instanceof Text
+        ? context.lastComponent
+        : new Text("", 0, 0);
+      const heading = theme.fg("toolTitle", theme.bold("Result"));
+      const output = context.isError
+        ? theme.fg("error", raw)
+        : raw.split("\n").map((line) => theme.fg("toolOutput", line)).join("\n");
+      text.setText(`\n${heading}\n${output}`);
       return text;
     },
   });
