@@ -67,6 +67,7 @@ jobs:
     environment: npm
     permissions:
       contents: write
+      id-token: write
     strategy:
       matrix: ${{ fromJson(needs.detect.outputs.matrix) }}
       fail-fast: false
@@ -78,8 +79,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm for trusted publishing
+        run: npm install --global npm@^11.5.1
 
       - run: pnpm install --frozen-lockfile
 
@@ -101,9 +105,8 @@ jobs:
           validation_level: error
 
       - name: Publish
-        run: pnpm --filter "./packages/${{ matrix.package }}" publish --no-git-checks --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: packages/${{ matrix.package }}
+        run: npm publish --access public
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
