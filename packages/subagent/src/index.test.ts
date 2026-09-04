@@ -33,14 +33,14 @@ test("registers only the minimal subagent schema without prompt injection", () =
 
   const parameters = definition?.parameters as {
     required?: string[];
-    properties?: { task?: { minLength?: number; type?: string } };
+    properties?: { prompt?: { minLength?: number; type?: string } };
   };
-  assert.deepEqual(parameters.required, ["task"]);
-  assert.equal(parameters.properties?.task?.minLength, 1);
-  assert.equal(parameters.properties?.task?.type, "string");
+  assert.deepEqual(parameters.required, ["prompt"]);
+  assert.equal(parameters.properties?.prompt?.minLength, 1);
+  assert.equal(parameters.properties?.prompt?.type, "string");
 });
 
-test("renders a one-line task summary when collapsed and the full task when expanded", () => {
+test("renders a one-line prompt summary when collapsed and the full prompt when expanded", () => {
   let definition: Record<string, unknown> | undefined;
   const pi = {
     on() {},
@@ -52,26 +52,26 @@ test("renders a one-line task summary when collapsed and the full task when expa
   registerSubagent(pi);
 
   const renderCall = definition?.renderCall as (
-    args: { task: string },
+    args: { prompt: string },
     theme: {
       fg: (color: string, text: string) => string;
       bold: (text: string) => string;
     },
     context: { expanded: boolean; lastComponent?: unknown },
   ) => { render: (width: number) => string[] };
-  const task = "Review authentication\nReport every security and correctness risk.";
+  const prompt = "Review authentication\nReport every security and correctness risk.";
   const theme = {
     fg: (_color: string, text: string) => text,
     bold: (text: string) => text,
   };
-  const collapsed = renderCall({ task }, theme, { expanded: false }).render(200).join("\n");
-  const expanded = renderCall({ task }, theme, { expanded: true }).render(200).join("\n");
+  const collapsed = renderCall({ prompt }, theme, { expanded: false }).render(200).join("\n");
+  const expanded = renderCall({ prompt }, theme, { expanded: true }).render(200).join("\n");
 
   assert.equal(collapsed.trim(), "subagent Review authentication Report every security and correctness risk.");
   assert.equal(expanded.split("\n")[0]?.trim(), "subagent");
   assert.match(expanded, /Review authentication\s*\nReport every security and correctness risk\./);
 
-  const narrowCollapsed = renderCall({ task }, theme, { expanded: false }).render(24);
+  const narrowCollapsed = renderCall({ prompt }, theme, { expanded: false }).render(24);
   assert.equal(narrowCollapsed.length, 1);
   assert.match(narrowCollapsed[0] ?? "", /\.\.\./);
 });

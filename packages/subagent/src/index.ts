@@ -32,7 +32,7 @@ interface AssistantMessage {
 }
 
 interface TaskResult {
-  task: string;
+  prompt: string;
   output: string;
   stderr: string;
   exitCode: number;
@@ -92,12 +92,12 @@ function addUsage(total: AssistantUsage, usage: AssistantUsage | undefined): voi
 }
 
 async function runTask(
-  task: string,
+  prompt: string,
   args: string[],
   cwd: string,
   signal: AbortSignal | undefined,
 ): Promise<TaskResult> {
-  const invocation = getPiInvocation([...args, "--", task]);
+  const invocation = getPiInvocation([...args, "--", prompt]);
   const child = spawn(invocation.command, invocation.args, {
     cwd,
     env: process.env,
@@ -162,7 +162,7 @@ async function runTask(
   if (stdoutBuffer.trim()) processLine(stdoutBuffer);
 
   return {
-    task,
+    prompt,
     output: finalOutput,
     stderr,
     exitCode,
@@ -185,11 +185,10 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: TOOL_NAME,
     label: "Subagent",
-    description: "Run one independent task.",
+    description: "Run a subagent",
     parameters: Type.Object({
-      task: Type.String({
+      prompt: Type.String({
         minLength: 1,
-        description: "Complete prompt for the subagent",
       }),
     }),
 
@@ -211,7 +210,7 @@ export default function (pi: ExtensionAPI) {
       if (activeTools.length > 0) childArgs.push("--tools", activeTools.join(","));
       else childArgs.push("--no-tools");
 
-      const result = await runTask(params.task, childArgs, ctx.cwd, signal);
+      const result = await runTask(params.prompt, childArgs, ctx.cwd, signal);
 
       if (signal?.aborted) throw new Error("Subagent was aborted");
 
@@ -228,14 +227,14 @@ export default function (pi: ExtensionAPI) {
     renderCall(args, theme, context) {
       const title = theme.fg("toolTitle", theme.bold("subagent"));
       if (!context.expanded) {
-        const summary = args.task.trim().replace(/\s+/g, " ");
+        const summary = args.prompt.trim().replace(/\s+/g, " ");
         return new TruncatedText(`${title} ${theme.fg("dim", summary)}`, 0, 0);
       }
 
       const text = context.lastComponent instanceof Text
         ? context.lastComponent
         : new Text("", 0, 0);
-      text.setText(`${title}\n${theme.fg("dim", args.task)}`);
+      text.setText(`${title}\n${theme.fg("dim", args.prompt)}`);
       return text;
     },
 

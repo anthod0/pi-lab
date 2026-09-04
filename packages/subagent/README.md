@@ -11,8 +11,8 @@ pi install npm:@pi-lab/subagent
 ## Features
 
 - **Schema only** — no system-prompt injection
-- **No role files** — no `*.md` specialists; the task string is the brief. The child uses the same model, tools, and project conventions as the main agent
-- **Simple lifecycle** — one task per call; parallel execution uses Pi's native tool concurrency
+- **No role files** — no `*.md` specialists. The child uses the same model, tools, and project conventions as the main agent
+- **Simple lifecycle** — one prompt per call; parallel execution uses Pi's native tool concurrency
 - **Trigger policy is yours** — this tool does not tell the model when to delegate. It follows whatever you define
 
 ## Use when
