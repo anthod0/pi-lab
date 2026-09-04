@@ -195,6 +195,27 @@ importers:
         specifier: 'catalog:'
         version: 4.22.4
 
+  packages/subagent:
+    devDependencies:
+      '@earendil-works/pi-coding-agent':
+        specifier: 'catalog:'
+        version: 0.80.6(ws@8.21.0)(zod@4.3.6)
+      '@earendil-works/pi-tui':
+        specifier: 'catalog:'
+        version: 0.80.6
+      '@sinclair/typebox':
+        specifier: 'catalog:'
+        version: 0.34.49
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.4
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.36(synckit@0.11.13))
+      tsx:
+        specifier: 'catalog:'
+        version: 4.22.4
+
   packages/utils:
     devDependencies:
       '@types/node':
