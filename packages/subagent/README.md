@@ -1,8 +1,6 @@
 # @pi-lab/subagent
 
-A minimal synchronous subagent tool for [pi](https://pi.dev).
-
-Each call runs one task in a headless `pi` child process and blocks until that child finishes. To run independent tasks concurrently, call the tool multiple times in the same response; pi executes sibling tool calls in parallel by default. In the TUI, the task prompt is shown when the tool call is expanded.
+A minimal synchronous subagent extension for [pi](https://pi.dev).
 
 ## Install
 
@@ -10,16 +8,25 @@ Each call runs one task in a headless `pi` child process and blocks until that c
 pi install npm:@pi-lab/subagent
 ```
 
-## Tool
+## Features
 
-```json
-{
-  "task": "Inspect the authentication implementation and report risks."
-}
-```
+- **Schema only** — no system-prompt injection
+- **No role files** — no `*.md` specialists; the task string is the brief. The child uses the same model, tools, and project conventions as the main agent
+- **Simple lifecycle** — one task per call; parallel execution uses Pi's native tool concurrency
+- **Trigger policy is yours** — this tool does not tell the model when to delegate. It follows whatever you define
 
-For parallel work, emit multiple `subagent` calls in the same response, with one task per call.
+## Use when
 
-Subagents inherit the current working directory, model, thinking level, active tools, extensions, context files, and system prompt configuration. The `subagent` tool itself is excluded in child processes to prevent recursion.
+**Isolate context. Add no orchestrator.**  
+You need a tool that just isolates context, not an orchestrator.
 
-The extension adds no prompt snippets, guidelines, agent roles, or prompt templates. Only the tool schema is exposed to the model.
+**Wrap headless `pi`.**  
+You only want a thin wrapper around headless `pi`.
+
+**One config for parent and child.**  
+The child behaves like the parent. No extra implicit instructions.
+
+## Not for
+
+Reusable roles, async/steer/fleet, or a workflow DSL.
+If you need these features, use a larger extension.
