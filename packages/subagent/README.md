@@ -1,8 +1,8 @@
 # @pi-lab/subagent
 
-A minimal synchronous, parallel subagent tool for [pi](https://pi.dev).
+A minimal synchronous subagent tool for [pi](https://pi.dev).
 
-Each task runs in a headless `pi` child process. Calls block the parent agent until every child finishes, while tasks within one call run in parallel. In the TUI, each task is shown with a compact, single-line prompt summary.
+Each call runs one task in a headless `pi` child process and blocks until that child finishes. To run independent tasks concurrently, call the tool multiple times in the same response; pi executes sibling tool calls in parallel by default. In the TUI, the task prompt is shown when the tool call is expanded.
 
 ## Install
 
@@ -14,14 +14,11 @@ pi install npm:@pi-lab/subagent
 
 ```json
 {
-  "tasks": [
-    "Inspect the authentication implementation and report risks.",
-    "Inspect the authentication tests and identify missing coverage."
-  ]
+  "task": "Inspect the authentication implementation and report risks."
 }
 ```
 
-A single task uses the same interface with one array element.
+For parallel work, emit multiple `subagent` calls in the same response, with one task per call.
 
 Subagents inherit the current working directory, model, thinking level, active tools, extensions, context files, and system prompt configuration. The `subagent` tool itself is excluded in child processes to prevent recursion.
 

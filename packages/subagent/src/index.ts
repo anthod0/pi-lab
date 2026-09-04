@@ -2,8 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { basename } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { keyHint } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import { Text, TruncatedText, type Component } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 
 const TOOL_NAME = "subagent";
@@ -42,7 +41,14 @@ interface TaskResult {
 }
 
 interface SubagentDetails {
-  results: TaskResult[];
+  result: TaskResult;
+}
+
+function emptyComponent(): Component {
+  return {
+    render: () => [],
+    invalidate: () => {},
+  };
 }
 
 function getPiInvocation(args: string[]): { command: string; args: string[] } {
@@ -159,14 +165,6 @@ async function runTask(
   };
 }
 
-function formatResults(results: TaskResult[]): string {
-  if (results.length === 1) return results[0].output;
-
-  return results
-    .map((result, index) => `## Task ${index + 1}\n\n${result.output}`)
-    .join("\n\n---\n\n");
-}
-
 function failureMessage(result: TaskResult): string | undefined {
   if (result.exitCode === 0 && result.stopReason !== "error" && result.stopReason !== "aborted") return undefined;
   return result.errorMessage || result.stderr.trim() || result.output || `Child exited with code ${result.exitCode}`;
@@ -176,15 +174,15 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: TOOL_NAME,
     label: "Subagent",
-    description: "Run one or more independent tasks in parallel.",
+    description: "Run one independent task. Call this tool multiple times in the same response to run tasks concurrently.",
     parameters: Type.Object({
-      tasks: Type.Array(Type.String({ minLength: 1 }), {
-        minItems: 1,
-        description: "Complete prompts for independent subagents",
+      task: Type.String({
+        minLength: 1,
+        description: "Complete prompt for the subagent",
       }),
     }),
 
-    async execute(_toolCallId, params, signal, onUpdate, ctx) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const activeTools = pi.getActiveTools().filter((name) => name !== TOOL_NAME);
       const childArgs = [
         "--mode",
@@ -202,57 +200,37 @@ export default function (pi: ExtensionAPI) {
       if (activeTools.length > 0) childArgs.push("--tools", activeTools.join(","));
       else childArgs.push("--no-tools");
 
-      let completed = 0;
-      const results = await Promise.all(
-        params.tasks.map(async (task) => {
-          const result = await runTask(task, childArgs, ctx.cwd, signal);
-          completed += 1;
-          onUpdate?.({
-            content: [{ type: "text", text: `${completed}/${params.tasks.length}` }],
-            details: { results: [] },
-          });
-          return result;
-        }),
-      );
+      const result = await runTask(params.task, childArgs, ctx.cwd, signal);
 
-      if (signal?.aborted) throw new Error("Subagents were aborted");
+      if (signal?.aborted) throw new Error("Subagent was aborted");
 
-      const failures = results
-        .map((result, index) => ({ index, message: failureMessage(result) }))
-        .filter((failure): failure is { index: number; message: string } => Boolean(failure.message));
-      if (failures.length > 0) {
-        throw new Error(failures.map(({ index, message }) => `Task ${index + 1}: ${message}`).join("\n\n"));
-      }
-
-      const output = formatResults(results);
-      const usage: AssistantUsage = {};
-      for (const result of results) addUsage(usage, result.usage);
+      const failure = failureMessage(result);
+      if (failure) throw new Error(failure);
 
       return {
-        content: [{ type: "text", text: output || "(no output)" }],
-        details: { results } satisfies SubagentDetails,
-        usage,
+        content: [{ type: "text", text: result.output || "(no output)" }],
+        details: { result } satisfies SubagentDetails,
+        usage: result.usage,
       };
     },
 
     renderCall(args, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-      const count = args.tasks.length;
-      let content = theme.fg("toolTitle", theme.bold("Tasks "));
-      content += theme.fg("accent", `${count}`);
-
-      if (context.expanded) {
-        for (const [index, task] of args.tasks.entries()) {
-          content += `\n  ${theme.fg("muted", `${index + 1}.`)} ${theme.fg("dim", task)}`;
-        }
+      const title = theme.fg("toolTitle", theme.bold("Subagent"));
+      if (!context.expanded) {
+        return new TruncatedText(`${title} ${theme.fg("dim", args.task)}`, 0, 0);
       }
 
-      text.setText(content);
+      const text = context.lastComponent instanceof Text
+        ? context.lastComponent
+        : new Text("", 0, 0);
+      text.setText(`${title}\n${theme.fg("dim", args.task)}`);
       return text;
     },
 
     renderResult(result, options, theme, context) {
-      const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+      const text = context.lastComponent instanceof Text
+        ? context.lastComponent
+        : new Text("", 0, 0);
       const raw = result.content.find((content) => content.type === "text")?.text ?? "";
 
       if (options.isPartial) {
@@ -261,22 +239,17 @@ export default function (pi: ExtensionAPI) {
         return text;
       }
 
+      if (!options.expanded) return emptyComponent();
+
       if (context.isError) {
-        text.setText(`${theme.fg("toolTitle", theme.bold("Results"))}\n${theme.fg("error", raw)}`);
+        text.setText(`${theme.fg("toolTitle", theme.bold("Result"))}\n${theme.fg("error", raw)}`);
         return text;
       }
 
       const lines = raw.split("\n");
-      const shown = options.expanded ? lines : lines.slice(0, 10);
-      const remaining = lines.length - shown.length;
-      let content = theme.fg("toolTitle", theme.bold("Results"));
-      if (shown.length > 0) {
-        content += `\n${shown.map((line) => theme.fg("toolOutput", line)).join("\n")}`;
-      }
-      if (remaining > 0) {
-        content += theme.fg("muted", `\n… (${remaining} more lines, `);
-        content += keyHint("app.tools.expand", "to expand");
-        content += theme.fg("muted", ")");
+      let content = theme.fg("toolTitle", theme.bold("Result"));
+      if (lines.length > 0) {
+        content += `\n${lines.map((line) => theme.fg("toolOutput", line)).join("\n")}`;
       }
 
       text.setText(content);
