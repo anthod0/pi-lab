@@ -68,7 +68,7 @@ test("hides task prompts until expanded, then renders them without truncation", 
   );
   const rendered = component.render(200).join("\n");
 
-  assert.match(rendered, /^Input 2 tasks/m);
+  assert.match(rendered, /^Tasks 2/m);
   assert.doesNotMatch(rendered, /Inspect authentication/);
   assert.doesNotMatch(rendered, /Review/);
 
@@ -81,7 +81,7 @@ test("hides task prompts until expanded, then renders them without truncation", 
     { expanded: true },
   ).render(200).join("\n");
 
-  assert.match(expanded, /^Input 1 task/m);
+  assert.match(expanded, /^Tasks 1/m);
   assert.match(expanded, new RegExp(`Review ${"a".repeat(100)} trailing text`));
 });
 
@@ -117,7 +117,7 @@ test("renders output separately and expands it on demand", () => {
     theme,
     { isError: false },
   ).render(200).join("\n");
-  assert.match(collapsed, /^Output/m);
+  assert.match(collapsed, /^Results/m);
   assert.match(collapsed, /line 10/);
 
   const expanded = renderResult(

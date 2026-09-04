@@ -2,12 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { basename } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import {
-  DEFAULT_MAX_BYTES,
-  DEFAULT_MAX_LINES,
-  keyHint,
-  truncateHead,
-} from "@earendil-works/pi-coding-agent";
+import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "@sinclair/typebox";
 
@@ -181,11 +176,11 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: TOOL_NAME,
     label: "Subagent",
-    description: "Run one or more independent tasks in parallel headless pi processes and wait for all results.",
+    description: "Run one or more independent tasks in parallel.",
     parameters: Type.Object({
       tasks: Type.Array(Type.String({ minLength: 1 }), {
         minItems: 1,
-        description: "Complete prompts for independent subagents. All tasks run concurrently.",
+        description: "Complete prompts for independent subagents",
       }),
     }),
 
@@ -213,7 +208,7 @@ export default function (pi: ExtensionAPI) {
           const result = await runTask(task, childArgs, ctx.cwd, signal);
           completed += 1;
           onUpdate?.({
-            content: [{ type: "text", text: `${completed}/${params.tasks.length} subagents completed` }],
+            content: [{ type: "text", text: `${completed}/${params.tasks.length}` }],
             details: { results: [] },
           });
           return result;
@@ -229,14 +224,7 @@ export default function (pi: ExtensionAPI) {
         throw new Error(failures.map(({ index, message }) => `Task ${index + 1}: ${message}`).join("\n\n"));
       }
 
-      const fullOutput = formatResults(results);
-      const truncated = truncateHead(fullOutput, {
-        maxBytes: DEFAULT_MAX_BYTES,
-        maxLines: DEFAULT_MAX_LINES,
-      });
-      const output = truncated.truncated
-        ? `${truncated.content}\n\n[Output truncated. Full output is preserved in tool details.]`
-        : truncated.content;
+      const output = formatResults(results);
       const usage: AssistantUsage = {};
       for (const result of results) addUsage(usage, result.usage);
 
@@ -250,8 +238,8 @@ export default function (pi: ExtensionAPI) {
     renderCall(args, theme, context) {
       const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
       const count = args.tasks.length;
-      let content = theme.fg("toolTitle", theme.bold("Input "));
-      content += theme.fg("accent", `${count} ${count === 1 ? "task" : "tasks"}`);
+      let content = theme.fg("toolTitle", theme.bold("Tasks "));
+      content += theme.fg("accent", `${count}`);
 
       if (context.expanded) {
         for (const [index, task] of args.tasks.entries()) {
@@ -268,19 +256,20 @@ export default function (pi: ExtensionAPI) {
       const raw = result.content.find((content) => content.type === "text")?.text ?? "";
 
       if (options.isPartial) {
-        text.setText(`${theme.fg("toolTitle", theme.bold("Output "))}${theme.fg("muted", raw || "Running…")}`);
+        const progress = raw ? ` ${raw}` : "…";
+        text.setText(`${theme.fg("toolTitle", theme.bold("Running"))}${theme.fg("muted", progress)}`);
         return text;
       }
 
       if (context.isError) {
-        text.setText(`${theme.fg("toolTitle", theme.bold("Output"))}\n${theme.fg("error", raw)}`);
+        text.setText(`${theme.fg("toolTitle", theme.bold("Results"))}\n${theme.fg("error", raw)}`);
         return text;
       }
 
       const lines = raw.split("\n");
       const shown = options.expanded ? lines : lines.slice(0, 10);
       const remaining = lines.length - shown.length;
-      let content = theme.fg("toolTitle", theme.bold("Output"));
+      let content = theme.fg("toolTitle", theme.bold("Results"));
       if (shown.length > 0) {
         content += `\n${shown.map((line) => theme.fg("toolOutput", line)).join("\n")}`;
       }
