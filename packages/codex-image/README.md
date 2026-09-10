@@ -1,30 +1,38 @@
 # @pi-lab/codex-image
 
-A Pi tool for generating and editing images through the installed Codex CLI and its built-in `image_gen` capability. No separate image API key or API fallback.
+Generate and edit images in [Pi](https://pi.dev) through Codex CLI, using your existing Codex login. Returns a PNG file and a preview—no separate image API key required.
 
-## Requirements and loading
-
-- `codex` on PATH, logged in with an account that supports image generation (`codex login`).
-- Tested with `codex-cli 0.154.0` using ChatGPT login. Older versions may lack the required flags or built-in tool.
-- Uses your existing Codex authentication and configuration, including `CODEX_HOME`. Prompts and reference images are sent to Codex/OpenAI and consume your account's usage.
-
-From this repository:
+## Install
 
 ```bash
-pnpm install
-pnpm --filter @pi-lab/codex-image build
-pi -e ./packages/codex-image/dist/index.mjs
+pi install npm:@pi-lab/codex-image
 ```
 
-For persistent local installation:
+Requires `codex` on your PATH and an account with image-generation access, signed in via `codex login`.
 
-```bash
-pi install /absolute/path/to/pi-lab/packages/codex-image
-```
+## Usage
 
-## Model configuration
+Ask Pi to generate an image:
 
-The plugin explicitly passes `-m gpt-5.6-sol` by default, independent of the default model in Codex configuration. Override it in `~/.pi/agent/settings.json` (global) or `<cwd>/.pi/settings.json` (trusted projects only):
+> Generate a square illustration of an orange robot painting a blue circle on white. Save it to assets/robot.png.
+
+Or edit an existing image:
+
+> Edit assets/robot.png: change the blue circle to green, keeping everything else unchanged. Save it to assets/robot-green.png.
+
+### Tool: `generate_image`
+
+| Parameter | Required | Description |
+| --- | --- | --- |
+| `prompt` | Yes | Image instructions: subject, style, composition, or what to change and preserve. |
+| `images` | No | Local reference or edit-target image paths. Describe each image's role in the prompt. |
+| `output` | No | New `.png` path, absolute or relative to the current directory. Existing files are never overwritten. |
+
+Without `output`, saves to `.pi/pi-lab/codex-image/run-*/image.png`. To refine a previous result, pass its saved path in `images`.
+
+## Configuration
+
+The default Codex model is `gpt-5.6-sol`. Override it in `~/.pi/agent/settings.json` or a trusted project's `.pi/settings.json`:
 
 ```json
 {
@@ -34,57 +42,10 @@ The plugin explicitly passes `-m gpt-5.6-sol` by default, independent of the def
 }
 ```
 
-Priority: trusted project setting → global setting → `gpt-5.6-sol`. Settings are read on every tool call; no reload is needed. Invalid model settings produce an error. The model is configuration, not an LLM-facing tool parameter.
+Choose a model with image-generation support—`gpt-5.3-codex-spark` does not expose the required tool.
 
-This selects the **orchestrating Codex model**, not the image renderer (`gpt-image-2` in Codex 0.154.0). Choose a model available to your account that exposes `image_gen`: live tests succeeded with `gpt-5.5` and `gpt-5.6-luna`, while `gpt-5.3-codex-spark` did not expose the tool even with `--enable image_generation`.
+## Notes
 
-## Tool: `generate_image`
-
-| Parameter | Description |
-| --- | --- |
-| `prompt` | Required image instructions, up to 16,000 characters. Include style, composition, text, and requested dimensions/aspect ratio. |
-| `images` | Optional ordered list of up to eight local reference/edit-target image paths. Explain each image's role and what to preserve in the prompt. |
-| `output` | Optional new `.png` path. Relative paths resolve from the Pi working directory. Existing files are never overwritten. |
-
-Example generation:
-
-```json
-{
-  "prompt": "An orange robot painting a blue circle, minimal illustration on white, square composition",
-  "output": "assets/robot.png"
-}
-```
-
-Example editing:
-
-```json
-{
-  "prompt": "Edit image 1: change the blue circle to green. Preserve the robot, pose, background and composition.",
-  "images": ["assets/robot.png"],
-  "output": "assets/robot-green.png"
-}
-```
-
-Without `output`, saves to `<cwd>/.pi/pi-lab/codex-image/run-*/image.png`. Returns the absolute saved path and a preview (up to 1536×1536 and 4 MiB); the original PNG is preserved unchanged. If preview conversion is unavailable, returns the saved path without a preview.
-
-Each request is independent. To refine a previous result, pass its saved path in `images`. Size, style and transparency are natural-language requests, not guaranteed low-level image API controls. One tool call produces one image.
-
-## Execution and safety
-
-- Runs `codex exec -m <configured-model> --ephemeral --sandbox read-only --enable image_generation` in a unique plugin run directory, with a structured final-response schema.
-- Does not disable the Codex sandbox or bypass approvals. Codex still loads the user's configuration/skills; this is not a security boundary against untrusted Codex configuration.
-- The plugin validates that the returned source is a newly written PNG under `$CODEX_HOME/generated_images/` (default `~/.codex/generated_images/`), is not an input image, and is at most 20 MiB.
-- Saves validated bytes using exclusive creation within Pi's per-file mutation queue. It never overwrites an existing destination, even if created while generation is running.
-- Cancellation is forwarded to Pi's process executor; the timeout is five minutes. Cancellation cannot undo remote usage or images already generated by Codex.
-- Schemas, final responses and CLI logs remain under `.pi/pi-lab/codex-image/run-*/`. Errors identify that directory. These files can include prompts and local paths; treat them as private. Codex also retains its original generated image despite `--ephemeral`.
-- Missing CLI, login errors, unsupported image generation, invalid responses and invalid image paths are reported as tool errors. No silent API fallback or automatic retries.
-
-## Verification
-
-```bash
-pnpm typecheck
-pnpm --filter @pi-lab/codex-image test
-pnpm --filter @pi-lab/codex-image build
-```
-
-Tests use unique OS temporary directories and injected executors; they do not change HOME, touch real Codex data, or call paid services. A live smoke test of the compiled tool also verified generation followed by an attached-image edit with Codex 0.154.0.
+- Each call generates one PNG, with a five-minute timeout and cancellation support.
+- Prompts and reference images are sent to Codex/OpenAI and consume your account's usage, even if you cancel after generation starts.
+- Errors include a diagnostic directory. Logs may contain prompts and local paths; review them before sharing.
