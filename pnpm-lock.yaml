@@ -80,6 +80,9 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: 'catalog:'
         version: 0.80.6(ws@8.21.0)(zod@4.3.6)
+      '@earendil-works/pi-tui':
+        specifier: 'catalog:'
+        version: 0.80.6
       '@pi-lab/utils':
         specifier: workspace:*
         version: link:../utils

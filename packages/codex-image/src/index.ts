@@ -1,5 +1,6 @@
 import { resizeImage, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@sinclair/typebox";
+import { Text } from "@earendil-works/pi-tui";
 import { generateImage } from "./generate.js";
 import { readImageModel } from "./settings.js";
 
@@ -19,6 +20,16 @@ export default function (pi: ExtensionAPI) {
     promptSnippet: "Generate or edit images using Codex CLI",
     promptGuidelines: ["Use generate_image for AI-generated raster images. For edits, supply local images and specify what to change and preserve."],
     parameters,
+    renderCall(args, theme, context) {
+      const text = context.lastComponent instanceof Text ? context.lastComponent : new Text("", 0, 0);
+      let content = theme.fg("toolTitle", theme.bold("generate_image"));
+      // Pi rerenders partial arguments before execution and clears isPartial on completion.
+      if (context.isPartial && typeof args.prompt === "string" && args.prompt) {
+        content += `\n${theme.fg("toolOutput", args.prompt)}`;
+      }
+      text.setText(content);
+      return text;
+    },
     async execute(_id, params, signal, onUpdate, ctx) {
       const model = readImageModel(ctx.cwd, ctx.isProjectTrusted());
       onUpdate?.({ content: [{ type: "text", text: `Generating image with Codex (${model})…` }], details: { model } });

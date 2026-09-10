@@ -22,6 +22,7 @@
   ],
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@pi-lab/utils": "workspace:*",
     "@sinclair/typebox": "catalog:",
     "@types/node": "catalog:",
@@ -30,6 +31,7 @@
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:peer",
+    "@earendil-works/pi-tui": "catalog:peer",
     "@sinclair/typebox": "catalog:"
   },
   "homepage": "https://github.com/anthod0/pi-lab/tree/main/packages/codex-image",
