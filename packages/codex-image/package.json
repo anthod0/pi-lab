@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/codex-image",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Generate and edit images using Codex CLI",
   "scripts": {
     "test": "tsx --test src/**/*.test.ts",

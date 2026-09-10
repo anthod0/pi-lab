@@ -6,7 +6,7 @@ A collection of [pi coding agent](https://github.com/earendil-works/pi) extensio
 
 | Package                                           | Description                                                             | Version                                                                                                                   |
 | ------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [@pi-lab/codex-image](./packages/codex-image)       | Generate and edit images using local Codex CLI                          | Unreleased |
+| [@pi-lab/codex-image](./packages/codex-image)       | Generate and edit images using local Codex CLI                          | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/codex-image)](https://www.npmjs.com/package/@pi-lab/codex-image) |
 | [@pi-lab/permissions](./packages/permissions)     | Permission system — enforce allow / deny / ask rules on tool calls      | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/permissions)](https://www.npmjs.com/package/@pi-lab/permissions)     |
 | [@pi-lab/webfetch](./packages/webfetch)           | Fetch URLs as clean Markdown with X/Twitter and Reddit optimizations     | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/webfetch)](https://www.npmjs.com/package/@pi-lab/webfetch)           |
 | [@pi-lab/websearch](./packages/websearch)         | Search the web with Exa                                                 | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/websearch)](https://www.npmjs.com/package/@pi-lab/websearch)         |
