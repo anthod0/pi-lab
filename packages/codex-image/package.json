@@ -1,0 +1,41 @@
+{
+  "name": "@pi-lab/codex-image",
+  "version": "0.1.0",
+  "description": "Generate and edit images using Codex CLI",
+  "scripts": {
+    "test": "tsx --test src/**/*.test.ts",
+    "build": "tsdown"
+  },
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./dist/index.mjs"
+    ]
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@pi-lab/utils": "workspace:*",
+    "@sinclair/typebox": "catalog:",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:peer",
+    "@sinclair/typebox": "catalog:"
+  },
+  "homepage": "https://github.com/anthod0/pi-lab/tree/main/packages/codex-image",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthod0/pi-lab.git",
+    "directory": "packages/codex-image"
+  }
+}
