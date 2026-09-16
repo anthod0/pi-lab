@@ -1,6 +1,6 @@
 # @pi-lab/codex-image
 
-Generate and edit images in [Pi](https://pi.dev) through Codex CLI, using your existing Codex login. Returns a PNG file and a preview—no separate image API key required.
+Generate and edit images in [Pi](https://pi.dev) through Codex CLI, using your existing Codex login. Saves a PNG file and returns its path—no separate image API key required.
 
 ## Install
 

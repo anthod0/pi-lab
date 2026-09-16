@@ -98,7 +98,7 @@ export async function generateImage(
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, bytes, { flag: "wx" });
     });
-    return { path, runDir, bytes };
+    return { path, runDir };
   } catch (error) {
     throw new Error(`${error instanceof Error ? error.message : String(error)}\nDiagnostics: ${runDir}`, { cause: error });
   }

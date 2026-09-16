@@ -1,4 +1,4 @@
-import { resizeImage, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@sinclair/typebox";
 import { Text } from "@earendil-works/pi-tui";
 import { generateImage } from "./generate.js";
@@ -16,7 +16,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "generate_image",
     label: "Generate image (Codex)",
-    description: "Generate or edit one PNG using locally installed, logged-in Codex CLI. Returns image preview and saved path. Requires built-in image generation (tested with Codex 0.154.0). Five-minute timeout; errors are bounded and full CLI logs are saved locally. No external API fallback.",
+    description: "Generate or edit one PNG using locally installed, logged-in Codex CLI. Returns the saved image path only. Requires built-in image generation (tested with Codex 0.154.0). Five-minute timeout; errors are bounded and full CLI logs are saved locally. No external API fallback.",
     promptSnippet: "Generate or edit images using Codex CLI",
     promptGuidelines: ["Use generate_image for AI-generated raster images. For edits, supply local images and specify what to change and preserve."],
     parameters,
@@ -32,15 +32,11 @@ export default function (pi: ExtensionAPI) {
     },
     async execute(_id, params, signal, onUpdate, ctx) {
       const model = readImageModel(ctx.cwd, ctx.isProjectTrusted());
-      onUpdate?.({ content: [{ type: "text", text: `Generating image with Codex (${model})…` }], details: { model } });
+      onUpdate?.({ content: [{ type: "text", text: `Generating image with Codex (${model})…` }], details: undefined });
       const result = await generateImage(params, ctx.cwd, pi.exec.bind(pi), signal, undefined, model);
-      const preview = await resizeImage(result.bytes, "image/png", { maxWidth: 1536, maxHeight: 1536, maxBytes: 4 * 1024 * 1024 });
       return {
-        content: [
-          { type: "text" as const, text: `Saved image: ${result.path}${preview ? "" : "\nPreview unavailable; original PNG saved."}` },
-          ...(preview ? [{ type: "image" as const, data: preview.data, mimeType: preview.mimeType }] : []),
-        ],
-        details: { path: result.path, runDir: result.runDir, model },
+        content: [{ type: "text" as const, text: `Saved image: ${result.path}` }],
+        details: undefined,
       };
     },
   });
