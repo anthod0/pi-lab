@@ -1,16 +1,20 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerWebSearchTool } from "./tool.js";
 
-/**
- * WebSearch extension for pi coding agent.
- *
- * Registers the `websearch` tool, backed by Exa Search API.
- * Requires EXA_API_KEY in the environment.
- */
 export default function (pi: ExtensionAPI) {
   registerWebSearchTool(pi);
 }
 
+export { readWebSearchProvider, resolveWebSearchProvider } from "./config.js";
+export { searchExa, buildExaRequest, parseExaResponse } from "./exa.js";
+export { searchParallel, buildParallelRequest, parseParallelResponse } from "./parallel.js";
+export { normalizeParams } from "./search.js";
 export { registerWebSearchTool } from "./tool.js";
-export { searchExa, normalizeParams, buildExaRequest, parseExaResponse } from "./exa.js";
-export type { WebSearchParams, NormalizedWebSearchParams, SearchDetails, NormalizedSearchResult } from "./exa.js";
+export type {
+  NormalizedSearchResult,
+  NormalizedWebSearchParams,
+  SearchDetails,
+  WebSearchParams,
+  WebSearchProvider,
+  WebSearchType,
+} from "./search.js";

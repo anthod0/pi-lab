@@ -1,65 +1,28 @@
 import { formatSearchResults } from "./format.js";
+import {
+  normalizeParams,
+  type NormalizedSearchResult,
+  type NormalizedWebSearchParams,
+  type SearchDetails,
+  type WebSearchParams,
+  type WebSearchType,
+} from "./search.js";
 
 export const EXA_SEARCH_URL = "https://api.exa.ai/search";
 
-export type WebSearchType = "auto" | "fast" | "instant" | "deep-lite" | "deep";
-export type WebSearchCategory =
-  | "news"
-  | "research paper"
-  | "company"
-  | "people"
-  | "personal site"
-  | "financial report";
-
-export interface WebSearchParams {
-  query: string;
-  num_results?: number;
-  type?: WebSearchType;
-  category?: WebSearchCategory;
-  include_domains?: string[];
-  exclude_domains?: string[];
-  start_published_date?: string;
-  end_published_date?: string;
-  fresh?: boolean;
-}
-
-export interface NormalizedWebSearchParams extends WebSearchParams {
-  query: string;
-  num_results: number;
-  type: WebSearchType;
-  fresh: boolean;
-}
+type ExaSearchType = "instant" | "auto" | "deep";
 
 export interface ExaSearchRequest {
   query: string;
-  type: WebSearchType;
+  type: ExaSearchType;
   numResults: number;
-  category?: WebSearchCategory;
   includeDomains?: string[];
   excludeDomains?: string[];
   startPublishedDate?: string;
-  endPublishedDate?: string;
   contents: {
     highlights: true;
     maxAgeHours?: 0;
   };
-}
-
-export interface NormalizedSearchResult {
-  title: string;
-  url: string;
-  publishedDate?: string;
-  author?: string;
-  highlights: string[];
-  text?: string;
-}
-
-export interface SearchDetails {
-  query: string;
-  type: WebSearchType;
-  resultCount: number;
-  results: NormalizedSearchResult[];
-  raw?: Record<string, unknown>;
 }
 
 interface ExaResult {
@@ -78,44 +41,29 @@ interface ExaResponse {
   autopromptString?: unknown;
 }
 
-export function normalizeParams(params: WebSearchParams): NormalizedWebSearchParams {
-  const query = params.query?.trim();
-  if (!query) throw new Error("websearch query must not be empty");
-
-  const numResults = params.num_results ?? 5;
-  if (!Number.isInteger(numResults)) throw new Error("websearch num_results must be an integer");
-  if (numResults < 1 || numResults > 20) {
-    throw new Error("websearch num_results must be between 1 and 20");
-  }
-
-  return {
-    ...params,
-    query,
-    num_results: numResults,
-    type: params.type ?? "auto",
-    fresh: params.fresh ?? false,
-  };
-}
+const EXA_TYPE_BY_COMMON_TYPE: Record<WebSearchType, ExaSearchType> = {
+  fast: "instant",
+  balanced: "auto",
+  deep: "deep",
+};
 
 export function buildExaRequest(params: NormalizedWebSearchParams): ExaSearchRequest {
   const request: ExaSearchRequest = {
     query: params.query,
-    type: params.type,
+    type: EXA_TYPE_BY_COMMON_TYPE[params.type],
     numResults: params.num_results,
     contents: { highlights: true },
   };
 
-  if (params.category) request.category = params.category;
   if (params.include_domains?.length) request.includeDomains = params.include_domains;
   if (params.exclude_domains?.length) request.excludeDomains = params.exclude_domains;
   if (params.start_published_date) request.startPublishedDate = params.start_published_date;
-  if (params.end_published_date) request.endPublishedDate = params.end_published_date;
   if (params.fresh) request.contents.maxAgeHours = 0;
 
   return request;
 }
 
-export function parseExaResponse(response: unknown): Omit<SearchDetails, "query" | "type"> {
+export function parseExaResponse(response: unknown): Omit<SearchDetails, "provider" | "query" | "type"> {
   if (!isObject(response) || !Array.isArray((response as ExaResponse).results)) {
     throw new Error("Malformed Exa response: expected a results array");
   }
@@ -150,21 +98,14 @@ export async function searchExa(
     body: JSON.stringify(request),
   });
 
-  const bodyText = await response.text();
-  let body: unknown;
-  try {
-    body = bodyText ? JSON.parse(bodyText) : {};
-  } catch {
-    if (!response.ok) throw new Error(`Exa search failed with status ${response.status}: ${response.statusText}`);
-    throw new Error("Malformed Exa response: response body is not valid JSON");
-  }
-
+  const body = await parseResponseBody(response, "Exa");
   if (!response.ok) {
     throw new Error(`Exa search failed with status ${response.status}: ${sanitizeErrorMessage(extractErrorMessage(body, response.statusText), apiKey)}`);
   }
 
   const parsed = parseExaResponse(body);
   const details: SearchDetails = {
+    provider: "exa",
     query: normalized.query,
     type: normalized.type,
     ...parsed,
@@ -198,6 +139,16 @@ function normalizeResult(result: ExaResult): NormalizedSearchResult {
   if (fallbackText?.trim()) normalized.text = fallbackText.trim();
 
   return normalized;
+}
+
+async function parseResponseBody(response: Response, provider: string): Promise<unknown> {
+  const bodyText = await response.text();
+  try {
+    return bodyText ? JSON.parse(bodyText) : {};
+  } catch {
+    if (!response.ok) throw new Error(`${provider} search failed with status ${response.status}: ${response.statusText}`);
+    throw new Error(`Malformed ${provider} response: response body is not valid JSON`);
+  }
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

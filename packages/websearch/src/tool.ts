@@ -1,11 +1,16 @@
 import { Type } from "@sinclair/typebox";
 import { type ExtensionAPI, keyHint } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { searchExa, type SearchDetails, type WebSearchParams } from "./exa.js";
+import { readWebSearchProvider } from "./config.js";
+import { searchExa } from "./exa.js";
+import { searchParallel } from "./parallel.js";
+import type { SearchDetails, WebSearchParams, WebSearchProvider } from "./search.js";
 
 export interface WebSearchToolOptions {
   env?: NodeJS.ProcessEnv;
   fetcher?: typeof fetch;
+  home?: string;
+  provider?: WebSearchProvider;
 }
 
 export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOptions = {}): void {
@@ -15,14 +20,14 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
   pi.registerTool({
     name: "websearch",
     label: "Web Search",
-    description: "Search the web with Exa and return concise, citation-friendly results.",
-    promptSnippet: "Search the web with Exa for concise citation-friendly results",
+    description: "Search the web and return concise, citation-friendly results.",
+    promptSnippet: "Search the web for concise citation-friendly results",
     promptGuidelines: [
       "Use websearch when current or external information is needed.",
       "Prefer natural-language search queries over short keyword-only queries.",
       "Use include_domains when the user asks for official or source-specific results.",
-      "Use category: \"news\" or published-date filters for recent/current events.",
-      "Keep type as auto unless speed or deeper research is explicitly useful.",
+      "Use start_published_date for recent/current events.",
+      "Keep type as balanced unless low latency or deeper research is explicitly useful.",
       "Use webfetch on a result URL when you need to read the full page content.",
     ],
     parameters: Type.Object({
@@ -32,37 +37,32 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
       ),
       type: Type.Optional(
         Type.Union([
-          Type.Literal("auto"),
           Type.Literal("fast"),
-          Type.Literal("instant"),
-          Type.Literal("deep-lite"),
+          Type.Literal("balanced"),
           Type.Literal("deep"),
-        ], { description: "Exa search type. Defaults to auto." }),
-      ),
-      category: Type.Optional(
-        Type.Union([
-          Type.Literal("news"),
-          Type.Literal("research paper"),
-          Type.Literal("company"),
-          Type.Literal("people"),
-          Type.Literal("personal site"),
-          Type.Literal("financial report"),
-        ], { description: "Optional Exa category filter." }),
+        ], { description: "Provider-neutral search depth. Defaults to balanced." }),
       ),
       include_domains: Type.Optional(Type.Array(Type.String(), { description: "Only include results from these domains." })),
       exclude_domains: Type.Optional(Type.Array(Type.String(), { description: "Exclude results from these domains." })),
       start_published_date: Type.Optional(Type.String({ description: "Only include results published on or after this ISO 8601 date." })),
-      end_published_date: Type.Optional(Type.String({ description: "Only include results published on or before this ISO 8601 date." })),
-      fresh: Type.Optional(Type.Boolean({ description: "When true, request the freshest Exa highlights with contents.maxAgeHours=0." })),
+      fresh: Type.Optional(Type.Boolean({ description: "When true, prefer freshly fetched content over cached content." })),
     }),
 
-    async execute(_toolCallId, params) {
-      const apiKey = env.EXA_API_KEY;
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const provider = options.provider ?? readWebSearchProvider({
+        cwd: ctx.cwd,
+        projectTrusted: ctx.isProjectTrusted(),
+        env,
+        home: options.home,
+      });
+      const apiKeyName = provider === "exa" ? "EXA_API_KEY" : "PARALLEL_API_KEY";
+      const apiKey = env[apiKeyName];
       if (!apiKey) {
-        throw new Error("EXA_API_KEY must be configured to use websearch. Set it in your environment or load it with @pi-lab/env.");
+        throw new Error(`${apiKeyName} must be configured to use websearch with ${provider}. Set it in your environment or load it with @pi-lab/env.`);
       }
 
-      const { markdown, details } = await searchExa(params as WebSearchParams, apiKey, fetcher);
+      const search = provider === "exa" ? searchExa : searchParallel;
+      const { markdown, details } = await search(params as WebSearchParams, apiKey, fetcher);
       return {
         content: [{ type: "text", text: markdown }],
         details,
@@ -73,7 +73,7 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
       const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
       let line = theme.fg("toolTitle", theme.bold("websearch "));
       line += theme.fg("accent", args.query ?? "");
-      if (args.type && args.type !== "auto") line += theme.fg("muted", ` · ${args.type}`);
+      if (args.type && args.type !== "balanced") line += theme.fg("muted", ` · ${args.type}`);
       if (args.num_results) line += theme.fg("dim", ` · ${args.num_results} results`);
       text.setText(line);
       return text;
@@ -95,7 +95,7 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
 
       const details = result.details as SearchDetails;
       const topResults = details.results.slice(0, options.expanded ? details.results.length : 5);
-      const header = theme.fg("success", `✓ ${details.resultCount} results`) + theme.fg("muted", ` · ${details.type}`);
+      const header = theme.fg("success", `✓ ${details.resultCount} results`) + theme.fg("muted", ` · ${details.provider} · ${details.type}`);
       const rows = topResults.map((item, index) => {
         const title = item.title || item.url;
         const highlights = options.expanded && item.highlights.length > 0

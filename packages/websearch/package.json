@@ -1,7 +1,7 @@
 {
   "name": "@pi-lab/websearch",
-  "version": "1.0.4",
-  "description": "Exa-powered web search tool extension for pi coding agent",
+  "version": "1.1.0",
+  "description": "Multi-provider web search tool extension for pi coding agent",
   "keywords": [
     "pi-package"
   ],
@@ -32,6 +32,7 @@
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
     "@earendil-works/pi-tui": "catalog:",
+    "@pi-lab/utils": "workspace:*",
     "@sinclair/typebox": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",

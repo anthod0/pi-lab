@@ -1,10 +1,11 @@
-import type { NormalizedSearchResult, SearchDetails } from "./exa.js";
+import type { NormalizedSearchResult, SearchDetails } from "./search.js";
 
 const MAX_FALLBACK_TEXT_LENGTH = 500;
 
 export function formatSearchResults(details: SearchDetails): string {
   const lines: string[] = [
     `Query: ${details.query}`,
+    `Provider: ${details.provider}`,
     `Type: ${details.type}`,
     `Results: ${details.resultCount}`,
   ];
