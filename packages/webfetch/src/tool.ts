@@ -113,20 +113,7 @@ export function registerWebFetchTool(pi: ExtensionAPI, config: WebFetchConfig): 
 	pi.registerTool({
 		name: "webfetch",
 		label: "Web Fetch",
-		description: [
-			"Fetch content from a URL and return it as Markdown text.",
-			"Handles HTML extraction via Mozilla Readability and pagination for large pages.",
-			"Inline scripts are listed in an index at the end — use the `script` parameter to read a specific one.",
-			"Non-text content (images, PDFs, etc.) is saved to a local file and the path is returned.",
-			"Cross-domain redirects are reported back so you can decide whether to follow them.",
-		].join(" "),
-		promptSnippet: "Fetch and read web page content from a URL",
-		promptGuidelines: [
-			"Use webfetch to retrieve content from URLs instead of suggesting the user open a browser.",
-			"For paginated results, increment `offset` by `returned_length` and call webfetch again until `truncated` is false.",
-			"If the page has inline scripts listed at the end, use `script=N` to read one if it might contain relevant data.",
-			"If webfetch returns a redirect result, call it again with the `redirect_url`.",
-		],
+		description: "Fetch a URL and return its content as Markdown.",
 		parameters: Type.Object({
 			url: Type.String({
 				description: "The URL to fetch.",
