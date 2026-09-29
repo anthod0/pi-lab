@@ -104,9 +104,15 @@ jobs:
           version: ${{ steps.version.outputs.version }}
           validation_level: warn
 
-      - name: Publish
+      - name: Pack
+        id: pack
         working-directory: packages/${{ matrix.package }}
-        run: npm publish --access public
+        run: |
+          TARBALL=$(pnpm pack --pack-destination "$RUNNER_TEMP" --json | jq -r '.filename')
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      - name: Publish
+        run: npm publish "${{ steps.pack.outputs.tarball }}" --access public
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
