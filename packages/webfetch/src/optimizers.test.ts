@@ -165,6 +165,43 @@ test("x html optimizer enriches current SSR video posts and preserves generic ex
 	assert.match(optimized.scripts[0]?.content ?? "", /self\.\$_TSR/);
 });
 
+test("x optimizer extracts current GraphQL SSR video media", async () => {
+	const html = `<!doctype html><html><body><main><h1>Current X post</h1></main><script>
+		self.$_TSR={dehydratedData:{tweet_result_by_rest_id:$R[1]={
+			rest_id:"2093050916953903451",
+			media_entities2:$R[2]=[$R[3]={
+				media_url_https:"https://pbs.twimg.com/amplify_video_thumb/example/img/poster.jpg",
+				original_info:$R[4]={height:1080,width:1920},
+				type:"video",
+				video_info:$R[5]={duration_millis:35062,variants:$R[6]=[
+					$R[7]={content_type:"application/x-mpegURL",url:"https://video.twimg.com/example/playlist.m3u8"},
+					$R[8]={bitrate:256000,content_type:"video/mp4",url:"https://video.twimg.com/example/480x270/low.mp4"},
+					$R[9]={bitrate:10368000,content_type:"video/mp4",url:"https://video.twimg.com/example/1920x1080/best.mp4?tag=29"}
+				]}
+			}]
+		}};
+	</script></body></html>`;
+
+	const optimized = await optimizeXFixture("2093050916953903451", html);
+
+	assert.match(optimized.markdown, /Current X post/);
+	assert.match(optimized.markdown, /Video \(MP4\): https:\/\/video\.twimg\.com\/example\/1920x1080\/best\.mp4\?tag=29/);
+	assert.doesNotMatch(optimized.markdown, /480x270\/low\.mp4/);
+	assert.match(optimized.markdown, /Thumbnail: https:\/\/pbs\.twimg\.com\/amplify_video_thumb\/example\/img\/poster\.jpg/);
+	assert.match(optimized.markdown, /Duration: 35\.062 seconds/);
+	assert.match(optimized.markdown, /Dimensions: 1920×1080/);
+});
+
+test("x GraphQL SSR optimizer only returns media associated with the focal post", async () => {
+	const media = (id: string, file: string, ref: number) => `$R[${ref}]={rest_id:"${id}",media_entities2:$R[${ref + 1}]=[$R[${ref + 2}]={type:"video",video_info:$R[${ref + 3}]={variants:$R[${ref + 4}]=[$R[${ref + 5}]={bitrate:100,content_type:"video/mp4",url:"https://video.twimg.com/${file}.mp4"}]}}]}`;
+	const html = `<html><body><main>Post</main><script>self.$_TSR={wrong:${media("999", "reply/wrong", 1)},focal:${media("123", "focal/correct", 20)}};</script></body></html>`;
+
+	const optimized = await optimizeXFixture("123", html);
+
+	assert.match(optimized.markdown, /https:\/\/video\.twimg\.com\/focal\/correct\.mp4/);
+	assert.doesNotMatch(optimized.markdown, /wrong\.mp4/);
+});
+
 test("x SSR optimizer only returns media associated with the focal post", async () => {
 	const html = xSsrHtml([
 		xSsrPosting("999", { contentUrl: "https://video.twimg.com/reply/wrong.mp4" }),

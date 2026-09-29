@@ -52,7 +52,7 @@ interface ObjectRange {
 type DirectPropertyValue =
 	| { type: "string"; value: string }
 	| { type: "number"; value: number }
-	| ({ type: "object" } & ObjectRange);
+	| ({ type: "object" | "array" } & ObjectRange);
 
 interface XDirectVideo {
 	type: "video" | "gif";
@@ -61,7 +61,7 @@ interface XDirectVideo {
 	durationMillis?: number;
 	width?: number;
 	height?: number;
-	source: "json-ld";
+	source: "json-ld" | "graphql";
 }
 
 function readJsString(source: string, start: number): JsStringToken | undefined {
@@ -179,7 +179,7 @@ function scanBalanced(source: string, start: number): ObjectRange | undefined {
 	return undefined;
 }
 
-function assignedObject(source: string, start: number, limit: number): ObjectRange | undefined {
+function assignedCollection(source: string, start: number, limit: number): ObjectRange | undefined {
 	const pairs: Record<string, string> = { "[": "]", "(": ")" };
 	const expected: string[] = [];
 	for (let i = start; i < limit; i++) {
@@ -196,10 +196,13 @@ function assignedObject(source: string, start: number, limit: number): ObjectRan
 			i = next - 1;
 			continue;
 		}
-		if (char === "{" && expected.length === 0) return scanBalanced(source, i);
 		if (char in pairs) expected.push(pairs[char]);
 		else if (char === "]" || char === ")") {
 			if (expected.pop() !== char) return undefined;
+		} else if (char === "=" && expected.length === 0) {
+			const collectionStart = skipTrivia(source, i + 1, limit);
+			if (source[collectionStart] !== "{" && source[collectionStart] !== "[") return undefined;
+			return scanBalanced(source, collectionStart);
 		} else if (char === "," && expected.length === 0) {
 			return undefined;
 		}
@@ -247,12 +250,16 @@ function directProperty(source: string, range: ObjectRange, name: string): Direc
 			const token = readJsString(source, valueStart);
 			return token ? { type: "string", value: token.value } : undefined;
 		}
-		if (valueChar === "{") {
-			const object = scanBalanced(source, valueStart);
-			return object && object.end <= range.end ? { type: "object", ...object } : undefined;
+		if (valueChar === "{" || valueChar === "[") {
+			const collection = scanBalanced(source, valueStart);
+			return collection && collection.end <= range.end
+				? { type: valueChar === "{" ? "object" : "array", ...collection }
+				: undefined;
 		}
-		const assigned = assignedObject(source, valueStart, range.end);
-		if (assigned && assigned.end <= range.end) return { type: "object", ...assigned };
+		const assigned = assignedCollection(source, valueStart, range.end);
+		if (assigned && assigned.end <= range.end) {
+			return { type: source[assigned.start] === "{" ? "object" : "array", ...assigned };
+		}
 		const numberMatch = source.slice(valueStart, range.end).match(/^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/i);
 		if (numberMatch) {
 			const value = Number(numberMatch[0]);
@@ -318,6 +325,81 @@ function propertyNumber(source: string, range: ObjectRange, name: string): numbe
 	return property?.type === "number" ? property.value : undefined;
 }
 
+function arrayObjects(source: string, range: ObjectRange): ObjectRange[] {
+	const objects: ObjectRange[] = [];
+	const closers = ["]"];
+	const pairs: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
+
+	for (let i = range.start + 1; i < range.end - 1; i++) {
+		const char = source[i];
+		if (char === '"' || char === "'" || char === "`") {
+			const token = readJsString(source, i);
+			if (!token) return objects;
+			i = token.end - 1;
+			continue;
+		}
+		if (source.startsWith("//", i) || source.startsWith("/*", i)) {
+			const next = skipTrivia(source, i, range.end);
+			if (next <= i || next >= range.end) return objects;
+			i = next - 1;
+			continue;
+		}
+		if (char === "{" && closers.length === 1) {
+			const object = scanBalanced(source, i);
+			if (!object || object.end > range.end) return objects;
+			objects.push(object);
+			i = object.end - 1;
+			continue;
+		}
+		if (char && char in pairs) closers.push(pairs[char]);
+		else if (char === "}" || char === "]" || char === ")") {
+			if (closers.pop() !== char) return objects;
+		}
+	}
+	return objects;
+}
+
+function findObjectsWithDirectString(source: string, property: string, value: string): ObjectRange[] {
+	const ranges: ObjectRange[] = [];
+	const seen = new Set<number>();
+	const delimiters: Array<{ char: string; start: number }> = [];
+	const pairs: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
+
+	for (let i = 0; i < source.length; i++) {
+		const char = source[i];
+		if (char === '"' || char === "'" || char === "`") {
+			const token = readJsString(source, i);
+			if (!token) return ranges;
+			if (token.value === value) {
+				for (let j = delimiters.length - 1; j >= 0; j--) {
+					const delimiter = delimiters[j];
+					if (delimiter?.char !== "{" || seen.has(delimiter.start)) continue;
+					const range = scanBalanced(source, delimiter.start);
+					if (range && propertyString(source, range, property) === value) {
+						seen.add(delimiter.start);
+						ranges.push(range);
+						break;
+					}
+				}
+			}
+			i = token.end - 1;
+			continue;
+		}
+		if (source.startsWith("//", i) || source.startsWith("/*", i)) {
+			const next = skipTrivia(source, i);
+			if (next <= i || next >= source.length) break;
+			i = next - 1;
+			continue;
+		}
+		if (char && char in pairs) delimiters.push({ char, start: i });
+		else if (char === "}" || char === "]" || char === ")") {
+			const opening = delimiters.pop();
+			if (!opening || pairs[opening.char] !== char) return ranges;
+		}
+	}
+	return ranges;
+}
+
 function postingMatchesStatus(script: string, range: ObjectRange, statusId: string): boolean {
 	if (propertyString(script, range, "identifier") === statusId) return true;
 	const id = propertyString(script, range, "@id");
@@ -380,6 +462,51 @@ function extractXDirectVideo(html: string, statusId: string): XDirectVideo | und
 				height: propertyNumber(script, video, "height"),
 				source: "json-ld",
 			};
+		}
+	}
+	return undefined;
+}
+
+function extractXGraphqlVideo(html: string, statusId: string): XDirectVideo | undefined {
+	const { document } = parseHTML(html);
+	for (const element of document.querySelectorAll("script:not([src])")) {
+		const script = element.textContent ?? "";
+		if (!script.includes(statusId) || !script.includes("video.twimg.com")) continue;
+
+		for (const tweet of findObjectsWithDirectString(script, "rest_id", statusId)) {
+			const mediaEntities = directProperty(script, tweet, "media_entities2");
+			if (mediaEntities?.type !== "array") continue;
+
+			for (const media of arrayObjects(script, mediaEntities)) {
+				const mediaType = propertyString(script, media, "type");
+				if (mediaType !== "video" && mediaType !== "animated_gif") continue;
+				const videoInfo = directProperty(script, media, "video_info");
+				if (videoInfo?.type !== "object") continue;
+				const variants = directProperty(script, videoInfo, "variants");
+				if (variants?.type !== "array") continue;
+
+				let best: { url: string; bitrate: number } | undefined;
+				for (const variant of arrayObjects(script, variants)) {
+					const contentType = propertyString(script, variant, "content_type") ?? "";
+					if (!contentType.includes("mp4")) continue;
+					const url = validVideoUrl(propertyString(script, variant, "url") ?? "");
+					if (!url) continue;
+					const bitrate = propertyNumber(script, variant, "bitrate") ?? 0;
+					if (!best || bitrate > best.bitrate) best = { url, bitrate };
+				}
+				if (!best) continue;
+
+				const originalInfo = directProperty(script, media, "original_info");
+				return {
+					type: mediaType === "animated_gif" ? "gif" : "video",
+					url: best.url,
+					thumbnailUrl: validThumbnailUrl(propertyString(script, media, "media_url_https")),
+					durationMillis: propertyNumber(script, videoInfo, "duration_millis"),
+					width: originalInfo?.type === "object" ? propertyNumber(script, originalInfo, "width") : undefined,
+					height: originalInfo?.type === "object" ? propertyNumber(script, originalInfo, "height") : undefined,
+					source: "graphql",
+				};
+			}
 		}
 	}
 	return undefined;
@@ -601,7 +728,7 @@ async function optimizeXHtml({ url, html, defaultProcess }: HtmlOptimizationInpu
 	const statusId = extractStatusId(url);
 	if (!statusId) return undefined;
 	try {
-		const media = extractXDirectVideo(html, statusId);
+		const media = extractXDirectVideo(html, statusId) ?? extractXGraphqlVideo(html, statusId);
 		if (!media) return undefined;
 		return enrichXMarkdown(await defaultProcess(), media);
 	} catch {
