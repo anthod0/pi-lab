@@ -32,6 +32,10 @@ function notifyWindows(title: string, body: string): void {
 	execFile("powershell.exe", ["-NoProfile", "-Command", windowsToastScript(title, body)]);
 }
 
+export function sendTmuxWindowAlert(): void {
+	process.stdout.write("\x07");
+}
+
 export function sendDesktopNotification(title: string, body: string): void {
 	if (process.env.WT_SESSION) {
 		notifyWindows(title, body);

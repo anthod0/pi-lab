@@ -10,12 +10,19 @@ pi install npm:@pi-lab/notify
 
 ## Behavior
 
-This extension sends a desktop notification for two events:
+This extension sends a notification for two events:
 
 - `agent_settled` — title `Pi`, message `Ready for input`
 - `permissions:ask` — title `Pi`, message `Permission required: <toolName>`
 
 `permissions:ask` is emitted by [`@pi-lab/permissions`](https://www.npmjs.com/package/@pi-lab/permissions) immediately before a permission prompt is shown.
+
+When Pi runs inside tmux, each notification also emits a terminal bell. For a background window, tmux marks and highlights its window label until the window is selected. This requires tmux's `monitor-bell` window option, which is enabled by default. The highlight uses `window-status-bell-style` and can be customized in `~/.tmux.conf`:
+
+```tmux
+setw -g monitor-bell on
+set -g window-status-bell-style 'fg=yellow,bold'
+```
 
 ## Notification backend
 
@@ -46,7 +53,7 @@ Local config overrides global config.
 }
 ```
 
-`enable` defaults to `true` and only controls built-in desktop notifications. Script hooks still run when `enable` is `false`.
+`enable` defaults to `true` and controls built-in desktop notifications and tmux window alerts. Script hooks still run when `enable` is `false`.
 
 ### Script hook
 

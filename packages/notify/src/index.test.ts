@@ -9,7 +9,7 @@ import notify from "./index.js";
 type EventHandler = (event: any, ctx: any) => Promise<void> | void;
 type BusHandler = (payload: any) => void;
 
-function setup(config?: unknown) {
+function setup(config?: unknown, env: NodeJS.ProcessEnv = {}) {
 	const home = mkdtempSync(join(tmpdir(), "pi-notify-home-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-notify-cwd-"));
 	if (config) {
@@ -20,6 +20,7 @@ function setup(config?: unknown) {
 	const eventHandlers: Record<string, EventHandler> = {};
 	const busHandlers: Record<string, BusHandler> = {};
 	const sent: Array<{ title: string; message: string }> = [];
+	const tmuxAlerts: string[] = [];
 	const scripts: unknown[] = [];
 	const warnings: string[] = [];
 
@@ -36,8 +37,12 @@ function setup(config?: unknown) {
 
 	notify(pi as any, {
 		home,
+		env,
 		sendNotification(title, message) {
 			sent.push({ title, message });
+		},
+		sendTmuxAlert() {
+			tmuxAlerts.push("alert");
 		},
 		runScript(_script, payload) {
 			scripts.push(payload);
@@ -50,6 +55,7 @@ function setup(config?: unknown) {
 	return {
 		cwd,
 		sent,
+		tmuxAlerts,
 		scripts,
 		warnings,
 		async start() {
@@ -82,14 +88,34 @@ test("permissions:ask sends fixed default notification with tool name", async ()
 	assert.deepEqual(app.sent, [{ title: "Pi", message: "Permission required: edit" }]);
 });
 
+test("notifications alert the tmux window", async () => {
+	const app = setup(undefined, { TMUX: "/tmp/tmux-1000/default,1,0" });
+	await app.start();
+
+	await app.agentSettled();
+	app.permissionAsk();
+
+	assert.equal(app.tmuxAlerts.length, 2);
+});
+
+test("notifications do not alert outside tmux", async () => {
+	const app = setup(undefined, {});
+	await app.start();
+
+	await app.agentSettled();
+
+	assert.equal(app.tmuxAlerts.length, 0);
+});
+
 test("enable false disables default notifications but keeps script hook", async () => {
-	const app = setup({ notify: { enable: false, script: "./notify.sh" } });
+	const app = setup({ notify: { enable: false, script: "./notify.sh" } }, { TMUX: "/tmp/tmux-1000/default,1,0" });
 	await app.start();
 
 	await app.agentSettled();
 	app.permissionAsk("bash", "ask-call");
 
 	assert.deepEqual(app.sent, []);
+	assert.equal(app.tmuxAlerts.length, 0);
 	assert.equal(app.scripts.length, 2);
 	assert.deepEqual(
 		app.scripts.map((payload: any) => ({
@@ -128,7 +154,7 @@ test("enable false disables default notifications but keeps script hook", async 
 });
 
 test("script payload includes terminal context", async () => {
-	const app = setup({ notify: { script: "./notify.sh" } });
+	const app = setup({ notify: { script: "./notify.sh" } }, process.env);
 	await app.start();
 
 	await app.agentSettled();
@@ -161,6 +187,7 @@ test("script hook errors are warned and do not stop notifications", async () => 
 	};
 	notify(pi as any, {
 		home,
+		env: {},
 		sendNotification(title, message) {
 			sent.push({ title, message });
 		},

@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { loadConfig, type NotifyConfig } from "./config.js";
-import { sendDesktopNotification } from "./notifier.js";
+import { sendDesktopNotification, sendTmuxWindowAlert } from "./notifier.js";
 import { runNotifyScript, type NotifyPayload, type TerminalContext } from "./script.js";
 
 type PermissionsAskEvent = {
@@ -11,7 +11,9 @@ type PermissionsAskEvent = {
 
 type NotifyDeps = {
 	home?: string;
+	env?: NodeJS.ProcessEnv;
 	sendNotification?: (title: string, message: string) => void;
+	sendTmuxAlert?: () => void;
 	runScript?: (script: string, payload: NotifyPayload) => void | Promise<void>;
 	warn?: (message: string) => void;
 };
@@ -23,7 +25,9 @@ export default function (pi: ExtensionAPI, deps: NotifyDeps = {}) {
 	let config: NotifyConfig = { enable: true };
 	let currentCwd = process.cwd();
 
+	const env = deps.env ?? process.env;
 	const sendNotification = deps.sendNotification ?? sendDesktopNotification;
+	const sendTmuxAlert = deps.sendTmuxAlert ?? sendTmuxWindowAlert;
 	const runScript = deps.runScript ?? runNotifyScript;
 	const warn = deps.warn ?? ((message: string) => console.warn(message));
 
@@ -52,13 +56,16 @@ export default function (pi: ExtensionAPI, deps: NotifyDeps = {}) {
 			timestamp,
 			cwd: currentCwd,
 			pid: process.pid,
-			terminal: getTerminalContext(),
+			terminal: getTerminalContext(env),
 		};
 	}
 
 	async function handleNotify(payload: NotifyPayload): Promise<void> {
 		if (config.enable) {
 			sendNotification(payload.title, payload.message);
+			if (payload.terminal.tmux) {
+				sendTmuxAlert();
+			}
 		}
 		if (config.script) {
 			try {
@@ -74,13 +81,13 @@ function isPermissionsAskEvent(value: unknown): value is PermissionsAskEvent {
 	return typeof value === "object" && value !== null;
 }
 
-function getTerminalContext(): TerminalContext {
+function getTerminalContext(env: NodeJS.ProcessEnv): TerminalContext {
 	return {
-		term: process.env.TERM,
-		termProgram: process.env.TERM_PROGRAM,
-		kittyWindowId: process.env.KITTY_WINDOW_ID,
-		weztermPane: process.env.WEZTERM_PANE,
-		wtSession: process.env.WT_SESSION,
-		tmux: process.env.TMUX,
+		term: env.TERM,
+		termProgram: env.TERM_PROGRAM,
+		kittyWindowId: env.KITTY_WINDOW_ID,
+		weztermPane: env.WEZTERM_PANE,
+		wtSession: env.WT_SESSION,
+		tmux: env.TMUX,
 	};
 }
