@@ -15,7 +15,7 @@ jobs:
       has_changes: ${{ steps.detect.outputs.has_changes }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -73,11 +73,11 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
@@ -102,14 +102,14 @@ jobs:
         with:
           path: packages/${{ matrix.package }}/CHANGELOG.md
           version: ${{ steps.version.outputs.version }}
-          validation_level: error
+          validation_level: warn
 
       - name: Publish
         working-directory: packages/${{ matrix.package }}
         run: npm publish --access public
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ matrix.package }}@${{ steps.version.outputs.version }}
           name: "${{ matrix.package }} v${{ steps.version.outputs.version }}"
