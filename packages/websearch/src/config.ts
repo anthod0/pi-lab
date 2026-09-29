@@ -26,8 +26,10 @@ export function resolveWebSearchProvider(
   const configuredProvider = readSettingsProvider(settings);
   if (configuredProvider) return configuredProvider;
 
-  if (env.PARALLEL_API_KEY && !env.EXA_API_KEY) return "parallel";
-  return "exa";
+  if (env.PARALLEL_API_KEY) return "parallel";
+  if (env.TINYFISH_API_KEY) return "tinyfish";
+  if (env.EXA_API_KEY) return "exa";
+  throw new Error("No websearch provider API key is configured. Set PARALLEL_API_KEY, TINYFISH_API_KEY, or EXA_API_KEY.");
 }
 
 function readSettingsProvider(settings: PiSettings): WebSearchProvider | undefined {
@@ -39,8 +41,8 @@ function readSettingsProvider(settings: PiSettings): WebSearchProvider | undefin
 
 function parseProvider(value: unknown, name: string): WebSearchProvider | undefined {
   if (value === undefined) return undefined;
-  if (value === "exa" || value === "parallel") return value;
-  throw new Error(`${name} must be either \"exa\" or \"parallel\".`);
+  if (value === "exa" || value === "parallel" || value === "tinyfish") return value;
+  throw new Error(`${name} must be \"exa\", \"parallel\", or \"tinyfish\".`);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

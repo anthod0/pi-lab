@@ -21,7 +21,7 @@ export interface ExaSearchRequest {
   startPublishedDate?: string;
   contents: {
     highlights: true;
-    maxAgeHours?: 0;
+    maxAgeHours: 0;
   };
 }
 
@@ -52,13 +52,12 @@ export function buildExaRequest(params: NormalizedWebSearchParams): ExaSearchReq
     query: params.query,
     type: EXA_TYPE_BY_COMMON_TYPE[params.type],
     numResults: params.num_results,
-    contents: { highlights: true },
+    contents: { highlights: true, maxAgeHours: 0 },
   };
 
   if (params.include_domains?.length) request.includeDomains = params.include_domains;
   if (params.exclude_domains?.length) request.excludeDomains = params.exclude_domains;
   if (params.start_published_date) request.startPublishedDate = params.start_published_date;
-  if (params.fresh) request.contents.maxAgeHours = 0;
 
   return request;
 }

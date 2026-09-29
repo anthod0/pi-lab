@@ -21,7 +21,7 @@ interface ParallelSourcePolicy {
 interface ParallelAdvancedSettings {
   max_results: number;
   source_policy?: ParallelSourcePolicy;
-  fetch_policy?: { max_age_seconds: 600 };
+  fetch_policy: { max_age_seconds: 600 };
 }
 
 export interface ParallelSearchRequest {
@@ -58,9 +58,11 @@ export function buildParallelRequest(params: NormalizedWebSearchParams): Paralle
   if (params.exclude_domains?.length) sourcePolicy.exclude_domains = params.exclude_domains;
   if (params.start_published_date) sourcePolicy.after_date = params.start_published_date;
 
-  const advancedSettings: ParallelAdvancedSettings = { max_results: params.num_results };
+  const advancedSettings: ParallelAdvancedSettings = {
+    max_results: params.num_results,
+    fetch_policy: { max_age_seconds: 600 },
+  };
   if (Object.keys(sourcePolicy).length > 0) advancedSettings.source_policy = sourcePolicy;
-  if (params.fresh) advancedSettings.fetch_policy = { max_age_seconds: 600 };
 
   return {
     objective: params.query,

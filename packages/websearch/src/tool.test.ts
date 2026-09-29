@@ -5,7 +5,9 @@ import { registerWebSearchTool } from "./tool.js";
 
 interface RegisteredTool {
   name: string;
-  promptGuidelines: string[];
+  description: string;
+  promptSnippet?: string;
+  promptGuidelines?: string[];
   execute: (
     toolCallId: string,
     params: unknown,
@@ -17,15 +19,16 @@ interface RegisteredTool {
 
 const context = { cwd: process.cwd(), isProjectTrusted: () => false };
 
-test("registerWebSearchTool registers provider-neutral prompt guidance", () => {
+test("registerWebSearchTool relies on the tool description without extra prompt injection", () => {
   let registered: RegisteredTool | undefined;
   const pi = { registerTool(tool: RegisteredTool) { registered = tool; } };
 
   registerWebSearchTool(pi as never, { provider: "exa", env: { EXA_API_KEY: "key" } });
 
   assert.equal(registered?.name, "websearch");
-  assert.ok(registered.promptGuidelines.some((line) => line.includes("current or external information")));
-  assert.ok(registered.promptGuidelines.some((line) => line.includes("balanced")));
+  assert.equal(registered?.description, "Search the web and return concise, citation-friendly results.");
+  assert.equal(registered?.promptSnippet, undefined);
+  assert.equal(registered?.promptGuidelines, undefined);
 });
 
 test("websearch execution requires the selected provider API key", async () => {
@@ -60,5 +63,30 @@ test("websearch routes execution to Parallel", async () => {
   const result = await registered!.execute("call-1", { query: "test", num_results: 1 }, undefined, undefined, context);
 
   assert.match(result.content[0].text, /Provider: parallel/);
+  assert.equal((result.details as { resultCount: number }).resultCount, 1);
+});
+
+test("websearch routes execution to TinyFish", async () => {
+  let registered: RegisteredTool | undefined;
+  const pi = { registerTool(tool: RegisteredTool) { registered = tool; } };
+  const fetcher: typeof fetch = async (url, init) => {
+    assert.equal(new URL(String(url)).origin, "https://api.search.tinyfish.ai");
+    assert.equal((init?.headers as Record<string, string>)["X-API-Key"], "key");
+    return new Response(JSON.stringify({
+      query: "test",
+      total_results: 1,
+      page: 0,
+      results: [{ title: "Top", url: "https://top.example", snippet: "Useful" }],
+    }), { status: 200 });
+  };
+
+  registerWebSearchTool(pi as never, {
+    provider: "tinyfish",
+    env: { TINYFISH_API_KEY: "key" },
+    fetcher,
+  });
+  const result = await registered!.execute("call-1", { query: "test", num_results: 1 }, undefined, undefined, context);
+
+  assert.match(result.content[0].text, /Provider: tinyfish/);
   assert.equal((result.details as { resultCount: number }).resultCount, 1);
 });

@@ -17,11 +17,14 @@ test("provider can be selected from Pi settings", () => {
   assert.equal(resolveWebSearchProvider({}, { websearch: { provider: "parallel" } }), "parallel");
 });
 
-test("provider is inferred only when Parallel is the sole configured key", () => {
+test("provider is inferred by Parallel, TinyFish, then Exa priority", () => {
   assert.equal(resolveWebSearchProvider({ PARALLEL_API_KEY: "key" }), "parallel");
+  assert.equal(resolveWebSearchProvider({ TINYFISH_API_KEY: "key" }), "tinyfish");
   assert.equal(resolveWebSearchProvider({ EXA_API_KEY: "key" }), "exa");
-  assert.equal(resolveWebSearchProvider({ EXA_API_KEY: "exa", PARALLEL_API_KEY: "parallel" }), "exa");
-  assert.equal(resolveWebSearchProvider({}), "exa");
+  assert.equal(resolveWebSearchProvider({ EXA_API_KEY: "exa", PARALLEL_API_KEY: "parallel" }), "parallel");
+  assert.equal(resolveWebSearchProvider({ EXA_API_KEY: "exa", TINYFISH_API_KEY: "tinyfish" }), "tinyfish");
+  assert.equal(resolveWebSearchProvider({ PARALLEL_API_KEY: "parallel", TINYFISH_API_KEY: "tinyfish" }), "parallel");
+  assert.throws(() => resolveWebSearchProvider({}), /No websearch provider API key is configured/);
 });
 
 test("invalid provider configuration is rejected", () => {

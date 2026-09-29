@@ -5,6 +5,7 @@ import { readWebSearchProvider } from "./config.js";
 import { searchExa } from "./exa.js";
 import { searchParallel } from "./parallel.js";
 import type { SearchDetails, WebSearchParams, WebSearchProvider } from "./search.js";
+import { searchTinyfish } from "./tinyfish.js";
 
 export interface WebSearchToolOptions {
   env?: NodeJS.ProcessEnv;
@@ -21,15 +22,6 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
     name: "websearch",
     label: "Web Search",
     description: "Search the web and return concise, citation-friendly results.",
-    promptSnippet: "Search the web for concise citation-friendly results",
-    promptGuidelines: [
-      "Use websearch when current or external information is needed.",
-      "Prefer natural-language search queries over short keyword-only queries.",
-      "Use include_domains when the user asks for official or source-specific results.",
-      "Use start_published_date for recent/current events.",
-      "Keep type as balanced unless low latency or deeper research is explicitly useful.",
-      "Use webfetch on a result URL when you need to read the full page content.",
-    ],
     parameters: Type.Object({
       query: Type.String({ description: "Natural-language web search query." }),
       num_results: Type.Optional(
@@ -45,7 +37,6 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
       include_domains: Type.Optional(Type.Array(Type.String(), { description: "Only include results from these domains." })),
       exclude_domains: Type.Optional(Type.Array(Type.String(), { description: "Exclude results from these domains." })),
       start_published_date: Type.Optional(Type.String({ description: "Only include results published on or after this ISO 8601 date." })),
-      fresh: Type.Optional(Type.Boolean({ description: "When true, prefer freshly fetched content over cached content." })),
     }),
 
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
@@ -55,13 +46,20 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
         env,
         home: options.home,
       });
-      const apiKeyName = provider === "exa" ? "EXA_API_KEY" : "PARALLEL_API_KEY";
+      const providerConfig = {
+        exa: { apiKeyName: "EXA_API_KEY", search: searchExa },
+        parallel: { apiKeyName: "PARALLEL_API_KEY", search: searchParallel },
+        tinyfish: { apiKeyName: "TINYFISH_API_KEY", search: searchTinyfish },
+      } satisfies Record<WebSearchProvider, {
+        apiKeyName: string;
+        search: typeof searchExa;
+      }>;
+      const { apiKeyName, search } = providerConfig[provider];
       const apiKey = env[apiKeyName];
       if (!apiKey) {
         throw new Error(`${apiKeyName} must be configured to use websearch with ${provider}. Set it in your environment or load it with @pi-lab/env.`);
       }
 
-      const search = provider === "exa" ? searchExa : searchParallel;
       const { markdown, details } = await search(params as WebSearchParams, apiKey, fetcher);
       return {
         content: [{ type: "text", text: markdown }],

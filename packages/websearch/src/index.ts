@@ -8,6 +8,7 @@ export default function (pi: ExtensionAPI) {
 export { readWebSearchProvider, resolveWebSearchProvider } from "./config.js";
 export { searchExa, buildExaRequest, parseExaResponse } from "./exa.js";
 export { searchParallel, buildParallelRequest, parseParallelResponse } from "./parallel.js";
+export { searchTinyfish, buildTinyfishRequest, parseTinyfishResponse } from "./tinyfish.js";
 export { normalizeParams } from "./search.js";
 export { registerWebSearchTool } from "./tool.js";
 export type {

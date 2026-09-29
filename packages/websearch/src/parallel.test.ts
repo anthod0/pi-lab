@@ -12,7 +12,6 @@ test("buildParallelRequest maps common parameters and search types", () => {
     include_domains: ["example.com"],
     exclude_domains: ["spam.example"],
     start_published_date: "2026-01-01",
-    fresh: true,
   })), {
     objective: "latest pi docs",
     search_queries: ["latest pi docs"],

@@ -12,7 +12,6 @@ test("normalizeParams applies provider-neutral defaults", () => {
     query: "pi coding agent",
     num_results: 5,
     type: "balanced",
-    fresh: false,
   });
 });
 
@@ -32,7 +31,6 @@ test("buildExaRequest maps common parameters and search types", () => {
     include_domains: ["example.com"],
     exclude_domains: ["spam.example"],
     start_published_date: "2026-01-01",
-    fresh: true,
   })), {
     query: "latest pi docs",
     type: "deep",

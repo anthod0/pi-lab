@@ -1,4 +1,4 @@
-export type WebSearchProvider = "exa" | "parallel";
+export type WebSearchProvider = "exa" | "parallel" | "tinyfish";
 export type WebSearchType = "fast" | "balanced" | "deep";
 
 export interface WebSearchParams {
@@ -8,14 +8,12 @@ export interface WebSearchParams {
   include_domains?: string[];
   exclude_domains?: string[];
   start_published_date?: string;
-  fresh?: boolean;
 }
 
 export interface NormalizedWebSearchParams extends WebSearchParams {
   query: string;
   num_results: number;
   type: WebSearchType;
-  fresh: boolean;
 }
 
 export interface NormalizedSearchResult {
@@ -51,6 +49,5 @@ export function normalizeParams(params: WebSearchParams): NormalizedWebSearchPar
     query,
     num_results: numResults,
     type: params.type ?? "balanced",
-    fresh: params.fresh ?? false,
   };
 }
