@@ -19,5 +19,10 @@ export function formatXSearchResults(details: XSearchDetails): string {
     });
   }
 
+  if (details.notes?.length) {
+    lines.push("", "## Notes", "");
+    details.notes.forEach((note) => lines.push(`- ${note}`));
+  }
+
   return lines.join("\n");
 }

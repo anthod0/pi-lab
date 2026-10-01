@@ -3,25 +3,11 @@ import test from "node:test";
 
 import {
   buildXSearchRequest,
-  loadXSearchConfig,
   normalizeParams,
   parseXaiResponse,
   searchX,
   type XSearchParams,
 } from "./xai.js";
-
-test("loadXSearchConfig applies defaults and top-level settings overrides", () => {
-  assert.deepEqual(loadXSearchConfig({}), {
-    model: "grok-4-1-fast-non-reasoning",
-    enableImageUnderstanding: false,
-    enableVideoUnderstanding: false,
-  });
-  assert.deepEqual(loadXSearchConfig({ xsearch: { model: "grok-4.20-reasoning", enableVideoUnderstanding: true } }), {
-    model: "grok-4.20-reasoning",
-    enableImageUnderstanding: false,
-    enableVideoUnderstanding: true,
-  });
-});
 
 test("normalizeParams trims query and validates handle filters", () => {
   const normalized = normalizeParams({ query: "  latest xAI  ", allowed_x_handles: ["@xai", " elonmusk "] });
@@ -35,7 +21,8 @@ test("normalizeParams trims query and validates handle filters", () => {
     () => normalizeParams({ query: "x", allowed_x_handles: ["xai"], excluded_x_handles: ["spam"] }),
     /cannot be set together/i,
   );
-  assert.throws(() => normalizeParams({ query: "x", allowed_x_handles: Array.from({ length: 11 }, (_, i) => `h${i}`) }), /max 10/i);
+  assert.doesNotThrow(() => normalizeParams({ query: "x", allowed_x_handles: Array.from({ length: 20 }, (_, i) => `h${i}`) }), "xAI allows 20");
+  assert.throws(() => normalizeParams({ query: "x", allowed_x_handles: Array.from({ length: 21 }, (_, i) => `h${i}`) }), /max 20/i);
 });
 
 test("normalizeParams validates date range", () => {
@@ -53,6 +40,12 @@ test("buildXSearchRequest maps params and config to xAI Responses payload", () =
 
   assert.deepEqual(buildXSearchRequest(normalizeParams(params), {
     model: "grok-4.20-reasoning",
+    backend: "auto",
+    maxMediaPerSearch: 4,
+    minRequestIntervalMs: 0,
+    maxPages: 5,
+    maxPagesCeiling: 20,
+    retryBaseDelayMs: 0,
     enableImageUnderstanding: true,
     enableVideoUnderstanding: false,
   }), {
@@ -102,7 +95,9 @@ test("searchX posts to xAI and redacts API key from errors", async () => {
     }), { status: 200 });
   };
 
-  const result = await searchX({ query: "test" }, { model: "m", enableImageUnderstanding: false, enableVideoUnderstanding: false }, "secret-key", okFetcher);
+  const result = await searchX({ query: "test" }, { model: "m", backend: "auto", maxMediaPerSearch: 4, minRequestIntervalMs: 0,
+    maxPages: 5,
+    maxPagesCeiling: 20, retryBaseDelayMs: 0, enableImageUnderstanding: false, enableVideoUnderstanding: false }, "secret-key", okFetcher);
   assert.equal(calls[0].url, "https://api.x.ai/v1/responses");
   assert.equal((calls[0].init.headers as Record<string, string>).Authorization, "Bearer secret-key");
   assert.match(result.markdown, /## Answer\n\nAnswer/);
@@ -110,7 +105,9 @@ test("searchX posts to xAI and redacts API key from errors", async () => {
 
   const errorFetcher: typeof fetch = async () => new Response(JSON.stringify({ error: "bad secret-key" }), { status: 401 });
   await assert.rejects(
-    () => searchX({ query: "test" }, { model: "m", enableImageUnderstanding: false, enableVideoUnderstanding: false }, "secret-key", errorFetcher),
+    () => searchX({ query: "test" }, { model: "m", backend: "auto", maxMediaPerSearch: 4, minRequestIntervalMs: 0,
+    maxPages: 5,
+    maxPagesCeiling: 20, retryBaseDelayMs: 0, enableImageUnderstanding: false, enableVideoUnderstanding: false }, "secret-key", errorFetcher),
     (error) => {
       assert.ok(error instanceof Error);
       assert.match(error.message, /xAI X search failed with status 401/);

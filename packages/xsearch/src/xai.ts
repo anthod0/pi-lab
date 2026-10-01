@@ -1,14 +1,11 @@
-import type { PiSettings } from "@pi-lab/utils";
+import { DEFAULT_XSEARCH_MODEL, loadXSearchConfig, type XSearchBackend, type XSearchConfig } from "./config.js";
 import { formatXSearchResults } from "./format.js";
 
 export const XAI_RESPONSES_URL = "https://api.x.ai/v1/responses";
-export const DEFAULT_XSEARCH_MODEL = "grok-4-1-fast-non-reasoning";
 
-export interface XSearchConfig {
-  model: string;
-  enableImageUnderstanding: boolean;
-  enableVideoUnderstanding: boolean;
-}
+// Re-exported so imports from this module keep working for existing consumers.
+export { DEFAULT_XSEARCH_MODEL, loadXSearchConfig };
+export type { XSearchBackend, XSearchConfig };
 
 export interface XSearchParams {
   query: string;
@@ -48,6 +45,12 @@ export interface XSearchDetails {
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
+  /** Disclosures worth surfacing to the user; rendered as a trailing `## Notes` section. */
+  notes?: string[];
+  /** Posts xAI reported fetching (`x_posts_fetched`), billed per item. */
+  xPostsFetched?: number;
+  /** Profiles xAI reported fetching via `x_user_search` (`x_users_fetched`). */
+  xUsersFetched?: number;
 }
 
 interface XaiUsage {
@@ -57,15 +60,10 @@ interface XaiUsage {
   server_side_tool_usage_details?: {
     x_search_calls?: unknown;
     web_search_calls?: unknown;
-  };
-}
-
-export function loadXSearchConfig(settings: PiSettings): XSearchConfig {
-  const config = isObject(settings.xsearch) ? settings.xsearch : {};
-  return {
-    model: typeof config.model === "string" && config.model.trim() ? config.model.trim() : DEFAULT_XSEARCH_MODEL,
-    enableImageUnderstanding: config.enableImageUnderstanding === true,
-    enableVideoUnderstanding: config.enableVideoUnderstanding === true,
+    /** Posts returned by keyword/semantic/thread search (xAI reports this). */
+    x_posts_fetched?: unknown;
+    /** Profiles returned by xAI's `x_user_search`. */
+    x_users_fetched?: unknown;
   };
 }
 
@@ -151,11 +149,18 @@ export function parseXaiResponse(response: unknown, query: string, model: string
   const totalTokens = numberOrUndefined(usage?.total_tokens);
   const xSearchCalls = numberOrUndefined(toolUsage?.x_search_calls);
   const webSearchCalls = numberOrUndefined(toolUsage?.web_search_calls);
+  // xAI bills per fetched item separately from calls, and `x_users_fetched` is
+  // the only signal that account discovery actually ran, so both counts are
+  // surfaced rather than dropped.
+  const xPostsFetched = numberOrUndefined(toolUsage?.x_posts_fetched);
+  const xUsersFetched = numberOrUndefined(toolUsage?.x_users_fetched);
   if (inputTokens !== undefined) details.inputTokens = inputTokens;
   if (outputTokens !== undefined) details.outputTokens = outputTokens;
   if (totalTokens !== undefined) details.totalTokens = totalTokens;
   if (xSearchCalls !== undefined) details.xSearchCalls = xSearchCalls;
   if (webSearchCalls !== undefined) details.webSearchCalls = webSearchCalls;
+  if (xPostsFetched !== undefined) details.xPostsFetched = xPostsFetched;
+  if (xUsersFetched !== undefined) details.xUsersFetched = xUsersFetched;
 
   return details;
 }
@@ -165,6 +170,7 @@ export async function searchX(
   config: XSearchConfig,
   apiKey: string,
   fetcher: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<{ markdown: string; details: XSearchDetails }> {
   const normalized = normalizeParams(params);
   const request = buildXSearchRequest(normalized, config);
@@ -176,6 +182,7 @@ export async function searchX(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(request),
+    signal,
   });
 
   const bodyText = await response.text();
@@ -197,11 +204,11 @@ export async function searchX(
 
 function normalizeHandles(handles: string[] | undefined, name: string): string[] {
   if (!handles?.length) return [];
-  if (handles.length > 10) throw new Error(`xsearch ${name} supports max 10 handles`);
+  if (handles.length > 20) throw new Error(`xsearch ${name} supports max 20 handles`);
   const normalized = handles
     .map((handle) => handle.trim().replace(/^@+/, ""))
     .filter((handle) => handle.length > 0);
-  if (normalized.length > 10) throw new Error(`xsearch ${name} supports max 10 handles`);
+  if (normalized.length > 20) throw new Error(`xsearch ${name} supports max 20 handles`);
   return normalized;
 }
 
