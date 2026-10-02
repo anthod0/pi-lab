@@ -3,23 +3,25 @@ import { existsSync } from "node:fs";
 import { basename } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text, TruncatedText, type Component } from "@earendil-works/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import { terminateAllProcessTrees, terminateProcessTree, trackProcessTree } from "./process-tree.js";
 
 const TOOL_NAME = "subagent";
 
 interface AssistantUsage {
-  input?: number;
-  output?: number;
-  cacheRead?: number;
-  cacheWrite?: number;
-  totalTokens?: number;
-  cost?: {
-    input?: number;
-    output?: number;
-    cacheRead?: number;
-    cacheWrite?: number;
-    total?: number;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  cacheWrite1h?: number;
+  reasoning?: number;
+  totalTokens: number;
+  cost: {
+    input: number;
+    output: number;
+    cacheRead: number;
+    cacheWrite: number;
+    total: number;
   };
 }
 
@@ -78,17 +80,22 @@ function getText(message: AssistantMessage): string {
 function addUsage(total: AssistantUsage, usage: AssistantUsage | undefined): void {
   if (!usage) return;
 
-  total.input = (total.input ?? 0) + (usage.input ?? 0);
-  total.output = (total.output ?? 0) + (usage.output ?? 0);
-  total.cacheRead = (total.cacheRead ?? 0) + (usage.cacheRead ?? 0);
-  total.cacheWrite = (total.cacheWrite ?? 0) + (usage.cacheWrite ?? 0);
-  total.totalTokens = (total.totalTokens ?? 0) + (usage.totalTokens ?? 0);
-  total.cost ??= {};
-  total.cost.input = (total.cost.input ?? 0) + (usage.cost?.input ?? 0);
-  total.cost.output = (total.cost.output ?? 0) + (usage.cost?.output ?? 0);
-  total.cost.cacheRead = (total.cost.cacheRead ?? 0) + (usage.cost?.cacheRead ?? 0);
-  total.cost.cacheWrite = (total.cost.cacheWrite ?? 0) + (usage.cost?.cacheWrite ?? 0);
-  total.cost.total = (total.cost.total ?? 0) + (usage.cost?.total ?? 0);
+  total.input += usage.input;
+  total.output += usage.output;
+  total.cacheRead += usage.cacheRead;
+  total.cacheWrite += usage.cacheWrite;
+  total.totalTokens += usage.totalTokens;
+  total.cost.input += usage.cost.input;
+  total.cost.output += usage.cost.output;
+  total.cost.cacheRead += usage.cost.cacheRead;
+  total.cost.cacheWrite += usage.cost.cacheWrite;
+  total.cost.total += usage.cost.total;
+  if (usage.cacheWrite1h !== undefined) {
+    total.cacheWrite1h = (total.cacheWrite1h ?? 0) + usage.cacheWrite1h;
+  }
+  if (usage.reasoning !== undefined) {
+    total.reasoning = (total.reasoning ?? 0) + usage.reasoning;
+  }
 }
 
 async function runTask(
@@ -113,7 +120,20 @@ async function runTask(
   let stopReason: string | undefined;
   let errorMessage: string | undefined;
   let spawnError: string | undefined;
-  const usage: AssistantUsage = {};
+  const usage: AssistantUsage = {
+    input: 0,
+    output: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+    totalTokens: 0,
+    cost: {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      total: 0,
+    },
+  };
 
   const processLine = (line: string): void => {
     if (!line.trim()) return;

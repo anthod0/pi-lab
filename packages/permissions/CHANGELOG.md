@@ -6,11 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-02
+
+### Changed
+
+- Updated the host peer dependency declaration and development toolchain for Pi 1.0.
+- Removed the unused legacy TypeBox dependency.
+
 ## [1.0.3] - 2026-08-05
 
 ### Fixed
 
 - Widened the supported `@earendil-works/pi-coding-agent` peer dependency range to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/permissions@1.0.3...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/permissions@1.0.4...HEAD
+[1.0.4]: https://github.com/anthod0/pi-lab/compare/permissions@1.0.3...permissions@1.0.4
 [1.0.3]: https://github.com/anthod0/pi-lab/compare/permissions@1.0.2...permissions@1.0.3

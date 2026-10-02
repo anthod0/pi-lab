@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/notify",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Desktop notification extension for pi coding agent",
   "keywords": [
     "pi-package"

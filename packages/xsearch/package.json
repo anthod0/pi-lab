@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/xsearch",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "xAI-powered X search tool extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -33,14 +33,14 @@
     "@earendil-works/pi-coding-agent": "catalog:",
     "@earendil-works/pi-tui": "catalog:",
     "@pi-lab/utils": "workspace:*",
-    "@sinclair/typebox": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "typebox": "catalog:"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:peer",
     "@earendil-works/pi-tui": "catalog:peer",
-    "@sinclair/typebox": "catalog:"
+    "typebox": "catalog:peer"
   }
 }

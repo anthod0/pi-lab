@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/grok-build",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Grok Build CLI tool extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -32,14 +32,14 @@
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
     "@earendil-works/pi-tui": "catalog:",
-    "@sinclair/typebox": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "typebox": "catalog:"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:peer",
     "@earendil-works/pi-tui": "catalog:peer",
-    "@sinclair/typebox": "catalog:"
+    "typebox": "catalog:peer"
   }
 }

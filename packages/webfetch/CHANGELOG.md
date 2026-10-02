@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-10-02
+
+### Changed
+
+- Updated host dependencies for Pi 1.0 and migrated tool schemas to TypeBox 1.x.
+
 ## [1.1.3] - 2026-09-29
 
 ### Fixed
@@ -45,7 +51,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` peer dependency ranges to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.3...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.4...HEAD
+[1.1.4]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.3...webfetch@1.1.4
 [1.1.3]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.2...webfetch@1.1.3
 [1.1.2]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.0...webfetch@1.1.2
 [1.1.0]: https://github.com/anthod0/pi-lab/compare/webfetch@1.0.5...webfetch@1.1.0

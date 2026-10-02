@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Type, type Static } from "@sinclair/typebox";
+import { Type, type Static } from "typebox";
 import { Text } from "@earendil-works/pi-tui";
 import { generateImage } from "./generate.js";
 import { readImageModel } from "./settings.js";

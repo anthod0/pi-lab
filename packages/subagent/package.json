@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/subagent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Minimal synchronous parallel subagent tool for pi coding agent",
   "keywords": [
     "pi-package"
@@ -33,14 +33,14 @@
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
     "@earendil-works/pi-tui": "catalog:",
-    "@sinclair/typebox": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "typebox": "catalog:"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:peer",
     "@earendil-works/pi-tui": "catalog:peer",
-    "@sinclair/typebox": "catalog:"
+    "typebox": "catalog:peer"
   }
 }
