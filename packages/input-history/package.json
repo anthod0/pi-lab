@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/input-history",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Cross-session input history navigation for pi coding agent",
   "keywords": [
     "pi-package"

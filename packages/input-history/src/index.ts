@@ -1,6 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { CustomEditor } from "@earendil-works/pi-coding-agent";
-import { matchesKey } from "@earendil-works/pi-tui";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -34,45 +33,16 @@ export default function (pi: ExtensionAPI) {
 		sessionDir = ctx.sessionManager.getSessionDir() ?? "";
 		history = sessionDir ? await loadHistory(sessionDir) : [];
 
+		const existingEditorFactory = ctx.ui.getEditorComponent();
 		ctx.ui.setEditorComponent((tui, theme, kb) => {
-			class HistoryEditor extends CustomEditor {
-				private globalIdx = -1;
-				private savedText = "";
+			const editor = existingEditorFactory?.(tui, theme, kb) ?? new CustomEditor(tui, theme, kb);
 
-				handleInput(data: string): void {
-					if (matchesKey(data, "up")) {
-						if (this.getText().trim() === "" || this.globalIdx > -1) {
-							if (this.globalIdx === -1) {
-								this.savedText = this.getText();
-							}
-							const newIndex = this.globalIdx + 1;
-							if (newIndex < history.length) {
-								this.globalIdx = newIndex;
-								this.setText(history[newIndex]!);
-							}
-							return;
-						}
-						super.handleInput(data);
-						return;
-					}
-
-					if (matchesKey(data, "down")) {
-						if (this.globalIdx > -1) {
-							const newIndex = this.globalIdx - 1;
-							this.globalIdx = newIndex;
-							this.setText(newIndex < 0 ? this.savedText : history[newIndex]!);
-							return;
-						}
-						super.handleInput(data);
-						return;
-					}
-
-					this.globalIdx = -1;
-					super.handleInput(data);
-				}
+			// addToHistory prepends entries, so load oldest first to preserve newest-first order.
+			for (let index = history.length - 1; index >= 0; index--) {
+				editor.addToHistory?.(history[index]!);
 			}
 
-			return new HistoryEditor(tui, theme, kb);
+			return editor;
 		});
 	});
 
