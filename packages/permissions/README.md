@@ -68,12 +68,13 @@ No match defaults to `allow`.
 
 ### ask mode
 
-A dialog prompts the user with four options:
+A dialog prompts the user with five options:
 
 - **Allow** — allow this call once
 - **Allow always** — allow identical calls for the rest of the session (not persisted)
 - **Deny** — deny this call once
 - **Deny always** — deny identical calls for the rest of the session (not persisted)
+- **Deny with feedback** — enter a multiline reason returned to the model; overrides the rule's `message` for this call only. Cancelling or submitting blank feedback still denies the call.
 
 ## Events
 
@@ -114,22 +115,18 @@ type PermissionsAskEvent = {
   toolCallId: string;
   toolName: string;
   rule: SerializedPermissionRule;
-  options: ["Allow", "Allow always", "Deny", "Deny always"];
+  options: ["Allow", "Allow always", "Deny", "Deny always", "Deny with feedback"];
 };
 
 type PermissionsUserSelectEvent = {
   toolCallId: string;
   toolName: string;
-  selection: "Allow" | "Allow always" | "Deny" | "Deny always" | null;
+  selection: "Allow" | "Allow always" | "Deny" | "Deny always" | "Deny with feedback" | null;
   decision: "allow" | "deny";
   cached: boolean;
   rule: SerializedPermissionRule;
 };
 ```
-
-### Privacy guarantee
-
-Event payloads never include `event.input` or derived raw argument values such as shell commands, file paths, or file contents. The `params` and `paths` fields contain only the configured rule patterns.
 
 ### Example listener
 

@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/permissions",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "Permission system extension for pi coding agent",
   "keywords": [
     "pi-package"
@@ -32,12 +32,14 @@
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@pi-lab/utils": "workspace:*",
     "tsdown": "catalog:",
     "tsx": "catalog:"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "catalog:peer"
+    "@earendil-works/pi-coding-agent": "catalog:peer",
+    "@earendil-works/pi-tui": "catalog:peer"
   },
   "dependencies": {
     "minimatch": "catalog:"

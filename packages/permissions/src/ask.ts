@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { buildTitle } from "./format";
+import { buildWritePreview, safePreviewText, selectWritePermission } from "./preview";
 import { PERMISSION_OPTIONS, type PermissionSelection } from "./events";
 
 export class SessionCache {
@@ -28,6 +29,7 @@ export type AskUserResult = {
 	selection: PermissionSelection | null;
 	decision: "allow" | "deny";
 	cached: boolean;
+	reason?: string;
 };
 
 export async function askUser(
@@ -36,9 +38,21 @@ export async function askUser(
 	cache: SessionCache,
 	ctx: ExtensionContext
 ): Promise<AskUserResult> {
-	const title = buildTitle(toolName, input);
+	let result: PermissionSelection | null;
+	if (toolName === "write") {
+		const preview = await buildWritePreview(input, ctx.cwd);
+		result = ctx.mode === "tui"
+			? await selectWritePermission(preview, ctx)
+			: (await ctx.ui.select(`⚠️ write\n${preview}`, PERMISSION_OPTIONS)) as PermissionSelection | null;
+	} else {
+		result = (await ctx.ui.select(safePreviewText(buildTitle(toolName, input)), PERMISSION_OPTIONS)) as PermissionSelection | null;
+	}
 
-	const result = (await ctx.ui.select(title, PERMISSION_OPTIONS)) as PermissionSelection | null;
+	if (result === "Deny with feedback") {
+		const feedback = await ctx.ui.editor("Why are you denying this call?");
+		const reason = feedback?.trim();
+		return { selection: result, decision: "deny", cached: false, ...(reason ? { reason } : {}) };
+	}
 
 	if (result === "Allow always") {
 		cache.set(toolName, input, "allow");

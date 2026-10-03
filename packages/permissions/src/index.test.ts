@@ -8,7 +8,7 @@ import permissions from "./index.js";
 
 type Handler = (event: any, ctx: any) => Promise<any>;
 
-function setup(rules: unknown[], options: { hasUI?: boolean; selections?: (string | null)[] } = {}) {
+function setup(rules: unknown[], options: { hasUI?: boolean; selections?: (string | null)[]; feedback?: string } = {}) {
 	const cwd = mkdtempSync(join(tmpdir(), "pi-permissions-events-cwd-"));
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
 	writeFileSync(join(cwd, ".pi", "settings.json"), JSON.stringify({ permissions: { rules } }), "utf8");
@@ -32,6 +32,7 @@ function setup(rules: unknown[], options: { hasUI?: boolean; selections?: (strin
 		cwd,
 		hasUI: options.hasUI ?? false,
 		ui: {
+			async editor() { return options.feedback; },
 			async select(_title: string, _options: string[]) {
 				return selections.shift() ?? null;
 			},
@@ -107,7 +108,7 @@ test("real ask emits ask before user_select and allow selection does not deny", 
 
 	assert.equal(result, undefined);
 	assert.deepEqual(app.emitted.map((event) => event.name), ["permissions:ask", "permissions:user_select"]);
-	assert.deepEqual(app.emitted[0].payload.options, ["Allow", "Allow always", "Deny", "Deny always"]);
+	assert.deepEqual(app.emitted[0].payload.options, ["Allow", "Allow always", "Deny", "Deny always", "Deny with feedback"]);
 	assert.equal(app.emitted[1].payload.selection, "Allow");
 	assert.equal(app.emitted[1].payload.decision, "allow");
 	assert.equal(app.emitted[1].payload.cached, false);
@@ -138,4 +139,24 @@ test("ask cache deny emits permissions:deny with source cache without prompting"
 	assert.deepEqual(app.emitted.map((event) => event.name), ["permissions:deny"]);
 	assert.equal(app.emitted[0].payload.source, "cache");
 	assert.equal(app.emitted[0].payload.toolCallId, "second");
+});
+
+
+test("denial feedback overrides rule message and reaches the blocked response", async () => {
+	const app = setup([askRule], { hasUI: true, selections: ["Deny with feedback"], feedback: "  Use an unprivileged command instead.  " });
+	await app.start();
+	const result = await app.toolCall({ command: "sudo true" });
+	assert.deepEqual(result, { block: true, reason: "Use an unprivileged command instead." });
+	assert.equal(app.emitted[1].payload.selection, "Deny with feedback");
+	assert.equal(app.emitted[1].payload.cached, false);
+	assert.equal(app.emitted[2].payload.reason, result.reason);
+});
+
+test("cancelled or blank feedback still denies without caching", async () => {
+	for (const feedback of [undefined, "   "]) {
+		const app = setup([askRule], { hasUI: true, selections: ["Deny with feedback", "Allow"], feedback });
+		await app.start();
+		assert.deepEqual(await app.toolCall({ command: "sudo true" }), { block: true, reason: "Confirm sudo" });
+		assert.equal(await app.toolCall({ command: "sudo true" }), undefined);
+	}
 });

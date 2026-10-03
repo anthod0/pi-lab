@@ -17,8 +17,8 @@ export type SerializedPermissionRule = {
 };
 
 export type PermissionsDenySource = "rule" | "cache" | "user" | "no_ui";
-export type PermissionSelection = "Allow" | "Allow always" | "Deny" | "Deny always";
-export const PERMISSION_OPTIONS: PermissionSelection[] = ["Allow", "Allow always", "Deny", "Deny always"];
+export type PermissionSelection = "Allow" | "Allow always" | "Deny" | "Deny always" | "Deny with feedback";
+export const PERMISSION_OPTIONS: PermissionSelection[] = ["Allow", "Allow always", "Deny", "Deny always", "Deny with feedback"];
 
 export type PermissionsDenyEvent = {
 	toolCallId: string;

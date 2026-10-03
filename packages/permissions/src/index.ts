@@ -71,7 +71,7 @@ export default function (pi: ExtensionAPI) {
 
 		if (userResult.decision === "allow") return undefined;
 
-		const reason = rule.message ?? "Blocked by user";
+		const reason = userResult.reason ?? rule.message ?? "Blocked by user";
 		emitDeny(pi.events, event.toolCallId, event.toolName, reason, "user", rule);
 		return { block: true, reason };
 	});
