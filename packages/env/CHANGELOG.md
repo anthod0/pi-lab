@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Load global env values before later extensions initialize. Keep shell
+  precedence and load trusted project settings at `session_start`.
+- Preserve changes and deletions of injected values across session events.
+- Read configuration before applying values to avoid partial loads on failure.
+
 ## [1.0.5] - 2026-10-02
 
 ### Changed

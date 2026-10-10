@@ -6,3 +6,4 @@ dist/
 *.tsbuildinfo
 specs
 ref/
+/PR.md
