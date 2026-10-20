@@ -41,6 +41,21 @@ INTERNAL_TOKEN=...
 
 Restart `pi` after editing settings or dotenv files.
 
+## Startup timing
+
+Global `settings.json` env values and `~/.pi/agent/.env` load during extension
+initialization, before `session_start`. The legacy `~/.pi/agent/pi-lab/.env`
+fallback still works. In the `packages` list, put `@pi-lab/env` before extensions
+that read environment variables during import or tool registration.
+
+Trusted project settings load at `session_start`. They override global settings
+and dotenv values set by this extension, but cannot change tool registrations
+that have already happened. Values inherited from the shell take priority.
+
+If another extension changes or deletes a value set by this loader, later
+`session_start` events leave it alone. Reload starts a new factory and leaves
+existing process values unchanged.
+
 ## Note
 
 - Does not override env vars already set before launching `pi`
