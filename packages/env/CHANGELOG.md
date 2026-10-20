@@ -6,11 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-10-20
+
 ### Fixed
 
 - Load global env values before later extensions initialize. Keep shell
   precedence and load trusted project settings at `session_start`.
-- Preserve changes and deletions of injected values across session events.
+- Preserve changes and deletions of injected values across session events,
+  even if another extension later restores the original value.
 - Read configuration before applying values to avoid partial loads on failure.
 
 ## [1.0.5] - 2026-10-02
@@ -25,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` peer dependency range to `>=0.80.3 <1`, preventing installation conflicts with pi 0.81 and newer. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/env@1.0.5...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/env@1.0.6...HEAD
+[1.0.6]: https://github.com/anthod0/pi-lab/compare/env@1.0.5...env@1.0.6
 [1.0.5]: https://github.com/anthod0/pi-lab/compare/env@1.0.4...env@1.0.5
 [1.0.4]: https://github.com/anthod0/pi-lab/compare/env@1.0.3...env@1.0.4
