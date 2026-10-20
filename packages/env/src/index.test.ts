@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { join, parse, sep } from "node:path";
 import test from "node:test";
 
 interface Scenario {
@@ -27,38 +27,35 @@ const keys = ["NEW_VALUE", "SHARED", "FILE_ONLY", "PROJECT_ONLY"];
 type Snapshot = Record<string, string | null>;
 
 function runScenario(scenario: Scenario = {}) {
-  const root = mkdtempSync(join(tmpdir(), "pi-env-startup-"));
-  const home = join(root, "home");
-  const agentDir = join(home, ".pi", "agent");
-  const cwd = join(root, "project");
-  mkdirSync(agentDir, { recursive: true });
-  mkdirSync(join(cwd, ".pi"), { recursive: true });
-  if (scenario.dotenvDirectory) {
-    mkdirSync(join(agentDir, ".env"));
-  } else if (scenario.dotenv !== undefined) {
-    const envDir = scenario.legacy ? join(agentDir, "pi-lab") : agentDir;
-    mkdirSync(envDir, { recursive: true });
-    writeFileSync(join(envDir, ".env"), scenario.dotenv, "utf8");
-  }
-  writeFileSync(
-    join(agentDir, "settings.json"),
-    scenario.globalContent ?? JSON.stringify({ env: scenario.globalEnv ?? {} }),
-    "utf8",
-  );
-  writeFileSync(
-    join(cwd, ".pi", "settings.json"),
-    scenario.projectContent ?? JSON.stringify({ env: scenario.projectEnv ?? {} }),
-    "utf8",
-  );
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    HOME: home,
-    PI_CODING_AGENT_DIR: agentDir,
-  };
-  for (const key of keys) delete env[key];
-  Object.assign(env, scenario.inherited);
-
+  const tempDir = realpathSync(tmpdir());
+  const realHome = realpathSync(homedir());
+  const root = mkdtempSync(join(tempDir, "pi-env-startup-"));
   try {
+    const agentDir = join(root, "agent");
+    const cwd = join(root, "project");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(join(cwd, ".pi"), { recursive: true });
+    if (scenario.dotenvDirectory) {
+      mkdirSync(join(agentDir, ".env"));
+    } else if (scenario.dotenv !== undefined) {
+      const envDir = scenario.legacy ? join(agentDir, "pi-lab") : agentDir;
+      mkdirSync(envDir, { recursive: true });
+      writeFileSync(join(envDir, ".env"), scenario.dotenv, "utf8");
+    }
+    writeFileSync(
+      join(agentDir, "settings.json"),
+      scenario.globalContent ?? JSON.stringify({ env: scenario.globalEnv ?? {} }),
+      "utf8",
+    );
+    writeFileSync(
+      join(cwd, ".pi", "settings.json"),
+      scenario.projectContent ?? JSON.stringify({ env: scenario.projectEnv ?? {} }),
+      "utf8",
+    );
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const key of keys) delete env[key];
+    Object.assign(env, scenario.inherited);
+
     const child = spawnSync(
       process.execPath,
       [
@@ -69,12 +66,13 @@ function runScenario(scenario: Scenario = {}) {
         `
           const moduleUrl = ${JSON.stringify(new URL("./index.ts", import.meta.url).href)};
           const { default: initialize } = await import(moduleUrl);
+          const paths = ${JSON.stringify({ agentDir, envFile: join(agentDir, ".env") })};
           const snapshot = () => Object.fromEntries(${JSON.stringify(keys)}.map(key => [key, process.env[key] ?? null]));
           const before = snapshot();
           let sessionStart;
           let factoryError = null;
           const api = { on: (name, handler) => { if (name === "session_start") sessionStart = handler; } };
-          try { initialize(api); } catch (error) { factoryError = error.message; }
+          try { initialize(api, paths); } catch (error) { factoryError = error.message; }
           const early = snapshot();
           Object.assign(process.env, ${JSON.stringify(scenario.changedAfterLoad ?? {})});
           for (const key of ${JSON.stringify(scenario.deletedAfterLoad ?? [])}) delete process.env[key];
@@ -88,7 +86,7 @@ function runScenario(scenario: Scenario = {}) {
           if (${scenario.reload ?? false}) {
             // Pi may return a cached factory or freshly evaluate its module.
             const { default: reinitialize } = await import(moduleUrl + "?reload");
-            reinitialize(api);
+            reinitialize(api, paths);
             await sessionStart({}, ctx);
           }
           console.log(JSON.stringify({ before, early, session, repeated, reloaded: snapshot(), factoryError, registered: !!sessionStart }));
@@ -108,6 +106,11 @@ function runScenario(scenario: Scenario = {}) {
       registered: boolean;
     };
   } finally {
+    // Only remove the exact mkdtemp result, never a home or an ancestor of it.
+    assert.ok(root.startsWith(join(tempDir, "pi-env-startup-")));
+    assert.notEqual(root, parse(root).root);
+    assert.notEqual(root, realHome);
+    assert.ok(!realHome.startsWith(`${root}${sep}`));
     rmSync(root, { recursive: true, force: true });
   }
 }
@@ -225,6 +228,34 @@ test("repeated events preserve changes and deletions of session-injected values"
   assert.equal(result.repeated.SHARED, "global");
   assert.equal(result.repeated.FILE_ONLY, null);
   assert.equal(result.repeated.PROJECT_ONLY, null);
+});
+
+for (const mutation of ["change", "delete"] as const) {
+  test(`repeated events do not reclaim a value restored after an external ${mutation}`, () => {
+    const result = runScenario({
+      globalEnv: { SHARED: "global" },
+      projectEnv: { SHARED: "project" },
+      changedAfterLoad: mutation === "change" ? { SHARED: "extension" } : {},
+      deletedAfterLoad: mutation === "delete" ? ["SHARED"] : [],
+      changedAfterSession: { SHARED: "global" },
+      repeat: true,
+    });
+    assert.equal(result.early.SHARED, "global");
+    assert.equal(result.session.SHARED, mutation === "change" ? "extension" : null);
+    assert.equal(result.repeated.SHARED, "global");
+  });
+}
+
+test("repeated events do not refill a relinquished value after another extension deletes it", () => {
+  const result = runScenario({
+    globalEnv: { SHARED: "global" },
+    projectEnv: { SHARED: "project" },
+    changedAfterLoad: { SHARED: "extension" },
+    deletedAfterSession: ["SHARED"],
+    repeat: true,
+  });
+  assert.equal(result.session.SHARED, "extension");
+  assert.equal(result.repeated.SHARED, null);
 });
 
 test("fresh factory evaluation on reload preserves existing process values", () => {
