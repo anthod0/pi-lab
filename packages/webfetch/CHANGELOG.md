@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.5] - 2026-10-21
+
+### Fixed
+
+- Restored direct MP4 extraction for X/Twitter posts using streamed GraphQL responses, selecting the highest-bitrate supported variant for the requested post while preserving page content and the inline script index.
+
+### Changed
+
+- Replaced legacy initial-state, JSON-LD, and embedded GraphQL extraction with streamed GraphQL video extraction. Pages without a usable video use normal HTML-to-Markdown extraction.
+
 ## [1.1.4] - 2026-10-02
 
 ### Changed
@@ -51,7 +61,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` peer dependency ranges to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.4...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.5...HEAD
+[1.1.5]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.4...webfetch@1.1.5
 [1.1.4]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.3...webfetch@1.1.4
 [1.1.3]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.2...webfetch@1.1.3
 [1.1.2]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.0...webfetch@1.1.2

@@ -17,7 +17,7 @@ pi install npm:@pi-lab/webfetch
 - **Binary downloads** — non-text responses (PDFs, images, etc.) are saved to `~/.pi/agent/pi-lab/tmp/webfetch/` and the file path is returned.
 - **LRU cache** — processed Markdown is cached in memory so paginating the same URL doesn't re-fetch.
 - **Built-in fetch optimizations** — enabled by default. Site-specific rules can parse difficult pages before generic extraction.
-  - X/Twitter posts are extracted from the page's `window.__INITIAL_STATE__` script.
+  - X/Twitter video posts include a direct MP4 link extracted from the page's streamed GraphQL data. The highest-bitrate supported variant is selected for the requested post; page content and the inline script index are preserved. If no usable video is found, normal HTML-to-Markdown extraction is used.
   - Reddit post permalinks use Reddit's Atom RSS feed for the post body and up to roughly 500 comments, then enrich the result with Embed media and the displayed comment count. RSS rate limits fall back immediately to Embed, with oEmbed as a final metadata fallback.
 - **Text feed support** — JSON, Atom, RSS, and XML responses are returned as text rather than downloaded as binary files.
 
