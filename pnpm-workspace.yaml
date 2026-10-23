@@ -1,5 +1,7 @@
 packages:
   - packages/*
+# Required by pnpm pack for bundled private TypeScript workspace dependencies.
+nodeLinker: hoisted
 catalog:
   '@aws-sdk/client-ssm': ^3.1095.0
   '@aws-sdk/credential-providers': ^3.1095.0

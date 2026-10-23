@@ -35,6 +35,9 @@ jobs:
           fi
 
           for pkg_json in packages/*/package.json; do
+            if jq -e '.private == true' "$pkg_json" > /dev/null; then
+              continue
+            fi
             pkg_name=$(basename $(dirname $pkg_json))
 
             if [ -n "$BEFORE_SHA" ]; then

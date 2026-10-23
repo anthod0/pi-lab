@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-24
+
+### Changed
+
+- Publish TypeScript source directly for Pi to load without compilation; replace the build-time bundler with standard `bundledDependencies` carrying private utils source, excluding tests.
+- Withdraw standalone `websearch` while OpenAI native search is enabled for the current model, independently reading the same configuration and applying matching eligibility rules without extension communication.
+
 ## [1.2.2] - 2026-10-02
 
 ### Changed
@@ -46,7 +53,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` peer dependency ranges to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.2...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.0...HEAD
+[1.3.0]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.2...websearch@1.3.0
 [1.2.2]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.1...websearch@1.2.2
 [1.2.1]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.0...websearch@1.2.1
 [1.2.0]: https://github.com/anthod0/pi-lab/compare/websearch@1.1.0...websearch@1.2.0

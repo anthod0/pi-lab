@@ -1,0 +1,47 @@
+{
+  "name": "@pi-lab/openai",
+  "version": "0.1.0",
+  "description": "OpenAI ChatGPT Fast mode and native web search for pi",
+  "scripts": {
+    "test": "tsx --test src/**/*.test.ts",
+    "build": "tsc --noEmit"
+  },
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "homepage": "https://github.com/anthod0/pi-lab/tree/main/packages/openai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anthod0/pi-lab.git",
+    "directory": "packages/openai"
+  },
+  "bugs": {
+    "url": "https://github.com/anthod0/pi-lab/issues"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:",
+    "@types/node": "catalog:",
+    "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:peer"
+  },
+  "dependencies": {
+    "@pi-lab/utils": "workspace:*"
+  },
+  "bundledDependencies": [
+    "@pi-lab/utils"
+  ]
+}

@@ -15,5 +15,9 @@
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
-  }
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts"
+  ]
 }

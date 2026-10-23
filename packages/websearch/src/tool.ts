@@ -12,6 +12,8 @@ export interface WebSearchToolOptions {
   fetcher?: typeof fetch;
   home?: string;
   provider?: WebSearchProvider;
+  exposure?: "direct" | "hidden";
+  defaultActive?: boolean;
 }
 
 export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOptions = {}): void {
@@ -20,6 +22,8 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
 
   pi.registerTool({
     name: "websearch",
+    exposure: options.exposure ?? "direct",
+    defaultActive: options.defaultActive ?? true,
     label: "Web Search",
     description: "Search the web and return concise, citation-friendly results.",
     parameters: Type.Object({

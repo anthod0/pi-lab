@@ -6,6 +6,7 @@ A collection of [pi coding agent](https://github.com/earendil-works/pi) extensio
 
 | Package                                           | Description                                                             | Version                                                                                                                   |
 | ------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [@pi-lab/openai](./packages/openai)               | OpenAI ChatGPT Fast controls and native Web Search                     | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/openai)](https://www.npmjs.com/package/@pi-lab/openai) |
 | [@pi-lab/codex-image](./packages/codex-image)       | Generate and edit images using local Codex CLI                          | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/codex-image)](https://www.npmjs.com/package/@pi-lab/codex-image) |
 | [@pi-lab/permissions](./packages/permissions)     | Permission system — enforce allow / deny / ask rules on tool calls      | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/permissions)](https://www.npmjs.com/package/@pi-lab/permissions)     |
 | [@pi-lab/webfetch](./packages/webfetch)           | Fetch URLs as clean Markdown with X/Twitter and Reddit optimizations     | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/webfetch)](https://www.npmjs.com/package/@pi-lab/webfetch)           |
@@ -53,8 +54,24 @@ pnpm typecheck
 # test an extension locally without installing
 pi -e ./packages/<name>/src/index.ts
 
-# test the compiled output
+```
+
+For packages that publish compiled output:
+
+```bash
 cd packages/<name>
 pnpm build
 pi -e ./dist/index.mjs
+```
+
+### TypeScript source packages
+
+`openai` and `websearch` publish `src/index.ts` directly. Their `build` scripts only type-check; they do not produce `dist` files. Each package uses standard `bundledDependencies` to include the private `@pi-lab/utils` TypeScript source, so utils is maintained once but never needs a separate npm release. Tests are excluded from both the extension and bundled utils.
+
+The workspace uses `nodeLinker: hoisted`, which pnpm requires for this packaging mode. Run `pnpm install` after updating the workspace configuration; installation and packing must use the same layout. Pi's host packages remain peer dependencies and are not bundled. The release workflow skips private packages.
+
+Packaging regression tests pack both source extensions, install their tarballs offline outside the workspace, and load them through Pi:
+
+```bash
+pnpm --filter @pi-lab/websearch test
 ```
