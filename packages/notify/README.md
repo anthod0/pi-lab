@@ -36,12 +36,12 @@ Click handling is not implemented by the built-in backend. Use the script hook f
 
 ## Configuration
 
-Configuration files:
+Set the `notify` object in pi settings:
 
-- Global: `~/.pi/agent/pi-lab/notify.json`
-- Local: `<cwd>/.pi/pi-lab/notify.json`
+- Global: `~/.pi/agent/settings.json`
+- Local: `<cwd>/.pi/settings.json`
 
-Local config overrides global config.
+Local config overrides global config field by field.
 
 ### Disable built-in notifications
 

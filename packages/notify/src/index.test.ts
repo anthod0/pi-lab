@@ -13,8 +13,8 @@ function setup(config?: unknown, env: NodeJS.ProcessEnv = {}) {
 	const home = mkdtempSync(join(tmpdir(), "pi-notify-home-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-notify-cwd-"));
 	if (config) {
-		mkdirSync(join(cwd, ".pi", "pi-lab"), { recursive: true });
-		writeFileSync(join(cwd, ".pi", "pi-lab", "notify.json"), JSON.stringify(config), "utf8");
+		mkdirSync(join(cwd, ".pi"), { recursive: true });
+		writeFileSync(join(cwd, ".pi", "settings.json"), JSON.stringify(config), "utf8");
 	}
 
 	const eventHandlers: Record<string, EventHandler> = {};

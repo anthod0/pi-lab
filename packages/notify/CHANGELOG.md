@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-24
+
+### Changed
+
+- Read notification configuration from the `notify` object in global and project `settings.json`, with legacy configuration fallback when that object is absent.
+
 ## [1.0.1] - 2026-10-02
 
 ### Changed
@@ -24,7 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` peer dependency range to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/notify@1.0.1...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/notify@1.0.2...HEAD
+[1.0.2]: https://github.com/anthod0/pi-lab/compare/notify@1.0.1...notify@1.0.2
 [1.0.1]: https://github.com/anthod0/pi-lab/compare/notify@1.0.0...notify@1.0.1
 [1.0.0]: https://github.com/anthod0/pi-lab/compare/notify@0.0.5...notify@1.0.0
 [0.0.5]: https://github.com/anthod0/pi-lab/compare/notify@0.0.4...notify@0.0.5

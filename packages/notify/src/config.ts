@@ -15,20 +15,22 @@ type RawNotifyConfig = {
 };
 
 export function loadConfig(cwd = process.cwd(), home = homedir()): NotifyConfig {
-	const globalNotify = readNotifyJson(join(getPiLabGlobalDir(home), "notify.json"));
-	const localNotify = readNotifyJson(join(getPiLabLocalDir(cwd), "notify.json"));
+	const globalNotify = readNotifyJson(join(home, ".pi", "agent", "settings.json"))
+		?? readNotifyJson(join(getPiLabGlobalDir(home), "notify.json"));
+	const localNotify = readNotifyJson(join(cwd, ".pi", "settings.json"))
+		?? readNotifyJson(join(getPiLabLocalDir(cwd), "notify.json"));
 	return normalizeConfig({ ...globalNotify, ...localNotify }, cwd, home);
 }
 
-function readNotifyJson(filePath: string): RawNotifyConfig {
+function readNotifyJson(filePath: string): RawNotifyConfig | undefined {
 	try {
 		const parsed = JSON.parse(readFileSync(filePath, "utf8")) as unknown;
-		if (!isPlainObject(parsed)) return {};
+		if (!isPlainObject(parsed)) return undefined;
 		const notify = parsed.notify;
-		return isPlainObject(notify) ? notify : {};
+		return isPlainObject(notify) ? notify : undefined;
 	} catch (error) {
 		const err = error as NodeJS.ErrnoException;
-		if (err.code === "ENOENT") return {};
+		if (err.code === "ENOENT") return undefined;
 		throw error;
 	}
 }
