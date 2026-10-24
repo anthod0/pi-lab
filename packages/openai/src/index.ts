@@ -5,7 +5,6 @@ import { SearchResponse } from "./search";
 
 const FAST_ENTRY = "pi-lab:openai-fast";
 const FAST_STATUS = "pi-lab:openai-fast";
-const SEARCH_STATUS = "pi-lab:openai-search";
 const SEARCH_TOOLS = new Set(["web_search", "web_search_2025_08_26", "web_search_preview", "web_search_preview_2025_03_11"]);
 
 type RequestState = {
@@ -27,18 +26,15 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 
 	function updateStatus(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
-		let status: string;
-		if (!config) status = "Fast: config error";
-		else if (!isOpenAIChatGPTModel(ctx)) status = `Fast: n/a (${fast ? "on" : "off"})`;
-		else status = `Fast: ${fast ? "on" : "off"}${lastTier ? ` (last: ${lastTier})` : ""}`;
-		ctx.ui.setStatus(FAST_STATUS, status);
+		ctx.ui.setStatus(FAST_STATUS,
+			config && fast && isOpenAIChatGPTModel(ctx) ? ctx.ui.theme.fg("dim", "fast") : undefined,
+		);
 	}
 
-	function clearRequest(ctx: ExtensionContext): void {
+	function clearRequest(): void {
 		request = undefined;
 		responses.clear();
 		overlappingStreams = false;
-		if (ctx.hasUI) ctx.ui.setStatus(SEARCH_STATUS, undefined);
 	}
 
 	function restoreFast(ctx: ExtensionContext): void {
@@ -49,7 +45,7 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 			if (typeof data?.fast === "boolean") fast = data.fast;
 		}
 		lastTier = undefined;
-		clearRequest(ctx);
+		clearRequest();
 		updateStatus(ctx);
 	}
 
@@ -58,7 +54,7 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 		turnActive = false;
 		fast = false;
 		lastTier = undefined;
-		clearRequest(ctx);
+		clearRequest();
 		try {
 			config = loadConfig(ctx.cwd, options.home);
 		} finally {
@@ -72,17 +68,17 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 		lastTier = undefined;
 		updateStatus(ctx);
 	});
-	pi.on("turn_start", (_event, ctx) => {
+	pi.on("turn_start", () => {
 		turnActive = true;
-		clearRequest(ctx);
+		clearRequest();
 	});
-	pi.on("turn_end", (_event, ctx) => {
+	pi.on("turn_end", () => {
 		turnActive = false;
-		clearRequest(ctx);
+		clearRequest();
 	});
 	pi.on("session_shutdown", (_event, ctx) => {
 		turnActive = false;
-		clearRequest(ctx);
+		clearRequest();
 		if (ctx.hasUI) ctx.ui.setStatus(FAST_STATUS, undefined);
 	});
 
@@ -95,7 +91,7 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 				return;
 			}
 			if (!config) {
-				ctx.ui.notify("Fix openai.json and /reload before changing Fast mode.", "error");
+				ctx.ui.notify("Fix the openai configuration in settings.json and /reload before changing Fast mode.", "error");
 				return;
 			}
 			if (command !== "status") {
@@ -107,7 +103,7 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 			ctx.ui.notify(
 				`Fast requests: ${fast ? "on" : "off"}. ` +
 				(isOpenAIChatGPTModel(ctx)
-					? "Applies to the next request; ChatGPT subscription support is not verified." +
+					? "Applies to the next request." +
 						(lastTier ? ` Last response tier: ${lastTier}.` : "")
 					: "Not applicable to the current model/authentication/endpoint."),
 				"info",
@@ -127,7 +123,9 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 		}
 		request = { model: ctx.model.id, fast, search: webSearch ? new SearchResponse() : undefined };
 		updateStatus(ctx);
-		const result = { ...payload, service_tier: fast ? "fast" : "default" };
+		const result = { ...payload };
+		if (fast) result.service_tier = "priority";
+		else delete result.service_tier;
 		if (!webSearch) return result;
 		const tools: unknown[] = Array.isArray(payload.tools) ? payload.tools : [];
 		if (tools.some((tool) => SEARCH_TOOLS.has(String(object(tool)?.type)))) {
@@ -136,7 +134,7 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 		return { ...result, tools: [...tools, { type: "web_search" }] };
 	});
 
-	pi.on("provider_stream_event", (event, ctx) => {
+	pi.on("provider_stream_event", (event) => {
 		if (!turnActive || event.provider !== "openai" || event.api !== "openai-responses") return;
 		const data = object(event.data);
 		if (!data) return;
@@ -161,18 +159,12 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 			const tier = response?.service_tier;
 			state.tier = typeof tier === "string" && ["default", "fast", "priority", "auto", "flex", "scale"].includes(tier)
 				? tier : undefined;
-			if (ctx.hasUI && ![...responses.values()].some((value) => !value.terminal)) ctx.ui.setStatus(SEARCH_STATUS, undefined);
 			return;
 		}
 		if (overlappingStreams) return;
 		const active = [...responses.values()].filter((value) => !value.terminal && value.model === event.model);
 		if (active.length !== 1) return;
 		active[0].search?.observe(data);
-		if (active[0].search && ctx.hasUI && (
-			data.type === "response.web_search_call.in_progress" || data.type === "response.web_search_call.searching"
-		)) {
-			ctx.ui.setStatus(SEARCH_STATUS, "Web search: searching");
-		}
 	});
 
 	pi.on("message_end", (event, ctx) => {
@@ -182,7 +174,6 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 		const state = responses.get(message.responseId);
 		if (!state || message.model !== state.model) return;
 		responses.delete(message.responseId);
-		if (ctx.hasUI) ctx.ui.setStatus(SEARCH_STATUS, undefined);
 		// Only a finalized assistant message updates the last observed tier, never a warm-up.
 		if (ctx.model?.id === state.model && fast === state.fast && isOpenAIChatGPTModel(ctx)) {
 			lastTier = state.tier;

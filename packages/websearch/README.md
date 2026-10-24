@@ -50,10 +50,10 @@ When no provider is configured, API keys are detected in this priority order: Pa
 
 ## OpenAI native search takes precedence
 
-When used with `@pi-lab/openai`, this extension reads the same configuration files:
+When used with `@pi-lab/openai`, this extension reads the `openai` section from the same Pi settings files. Add it alongside any existing settings:
 
-- `~/.pi/agent/pi-lab/openai.json`
-- `<cwd>/.pi/pi-lab/openai.json` (project fields override global fields)
+- `~/.pi/agent/settings.json`
+- `<cwd>/.pi/settings.json` (project fields override global fields)
 
 ```json
 {

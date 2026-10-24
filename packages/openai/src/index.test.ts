@@ -13,7 +13,7 @@ function setup(t: TestContext, config?: unknown) {
 	t.after(() => directory.remove());
 	const home = join(directory.path, "home");
 	const cwd = join(directory.path, "project");
-	const configPath = join(cwd, ".pi", "pi-lab", "openai.json");
+	const configPath = join(cwd, ".pi", "settings.json");
 	function writeConfig(value: unknown) {
 		mkdirSync(dirname(configPath), { recursive: true });
 		writeFileSync(configPath, JSON.stringify(value));
@@ -32,6 +32,7 @@ function setup(t: TestContext, config?: unknown) {
 		modelRegistry: { isUsingOAuth: () => oauth },
 		sessionManager: { getBranch: () => branch },
 		ui: {
+			theme: { fg: (_color: string, text: string) => text },
 			setStatus(key: string, text: string | undefined) {
 				if (text === undefined) statuses.delete(key);
 				else statuses.set(key, text);
@@ -90,11 +91,55 @@ function fullText(message: ReturnType<typeof assistant>): string {
 	return message.content.filter((part: any) => part.type === "text").map((part: any) => part.text).join("\n");
 }
 
-test("default requests use standard service and do not enable search", async (t) => {
+test("Fast status is only present while enabled on a supported connection", async (t) => {
 	const app = setup(t);
 	await app.start();
-	assert.deepEqual(await app.payload(), { model: "test-model", service_tier: "default" });
+	assert.equal(app.statuses.size, 0);
+	await app.command("on");
+	assert.equal(app.statuses.has("pi-lab:openai-fast"), true);
+	app.setOAuth(false);
+	await app.emit("model_select");
+	assert.equal(app.statuses.size, 0);
+	app.setOAuth(true);
+	await app.emit("model_select");
+	assert.equal(app.statuses.has("pi-lab:openai-fast"), true);
+	await app.command("off");
+	assert.equal(app.statuses.size, 0);
 });
+
+test("native search does not publish status while preserving source links", async (t) => {
+	const app = setup(t, { openai: { webSearch: true } });
+	await app.start();
+	await app.begin();
+	for (const type of ["response.web_search_call.in_progress", "response.web_search_call.searching"]) {
+		await app.raw({ type });
+		assert.equal(app.statuses.size, 0);
+	}
+	await app.raw({ type: "response.output_text.annotation.added", annotation: citation() });
+	assert.ok(fullText(await app.end()).includes("https://example.com/source"));
+	assert.equal(app.statuses.size, 0);
+});
+
+test("default requests omit the service tier and do not enable search", async (t) => {
+	const app = setup(t);
+	await app.start();
+	assert.deepEqual(await app.payload(), { model: "test-model" });
+});
+
+for (const webSearch of [false, true]) {
+	test(`Fast overrides existing tiers when on and removes them when off; search=${webSearch}`, async (t) => {
+		const app = setup(t, { openai: { fast: true, webSearch } });
+		await app.start();
+		const payload = { model: "test-model", service_tier: "flex", tools: [{ type: "function", name: "read" }] };
+		const original = structuredClone(payload);
+		assert.equal((await app.payload(payload)).service_tier, "priority");
+		await app.command("off");
+		const result = await app.payload(payload);
+		assert.equal(Object.hasOwn(result, "service_tier"), false);
+		assert.deepEqual(result.tools, webSearch ? [...payload.tools, { type: "web_search" }] : payload.tools);
+		assert.deepEqual(payload, original);
+	});
+}
 
 test("enabled features preserve existing payload fields and tools without mutation", async (t) => {
 	const app = setup(t, { openai: { fast: true, webSearch: true } });
@@ -102,7 +147,7 @@ test("enabled features preserve existing payload fields and tools without mutati
 	const payload = { model: "test-model", input: [], tools: [{ type: "function", name: "read" }], include: ["reasoning.encrypted_content"], store: false };
 	const original = structuredClone(payload);
 	const result = await app.payload(payload);
-	assert.equal(result.service_tier, "fast");
+	assert.equal(result.service_tier, "priority");
 	assert.deepEqual(result.tools, [...payload.tools, { type: "web_search" }]);
 	assert.deepEqual(result.input, []);
 	assert.deepEqual(result.include, ["reasoning.encrypted_content"]);
@@ -148,19 +193,19 @@ test("Fast commands affect future requests, persist only in the session and reje
 	await app.start();
 	const file = readFileSync(app.configPath, "utf8");
 	await app.command("on");
-	assert.equal((await app.payload()).service_tier, "fast");
+	assert.equal((await app.payload()).service_tier, "priority");
 	assert.deepEqual(app.branch.map((entry) => entry.data), [{ fast: true }]);
 	await app.command("status");
 	assert.equal(app.branch.length, 1);
 	await app.command("invalid");
-	assert.equal((await app.payload()).service_tier, "fast");
+	assert.equal((await app.payload()).service_tier, "priority");
 	assert.equal(app.branch.length, 1);
 	assert.equal(app.notices.at(-1)?.level, "error");
 	await app.command("");
-	assert.equal((await app.payload()).service_tier, "default");
+	assert.equal(Object.hasOwn(await app.payload(), "service_tier"), false);
 	await app.command("on");
 	await app.command("off");
-	assert.equal((await app.payload()).service_tier, "default");
+	assert.equal(Object.hasOwn(await app.payload(), "service_tier"), false);
 	assert.equal(readFileSync(app.configPath, "utf8"), file);
 });
 
@@ -170,16 +215,16 @@ test("resume restores the active branch override; tree navigation and new sessio
 	await app.command("on");
 	const enabledBranch = [...app.branch];
 	await app.start();
-	assert.equal((await app.payload()).service_tier, "fast");
+	assert.equal((await app.payload()).service_tier, "priority");
 	app.setBranch([]);
 	await app.emit("session_tree");
-	assert.equal((await app.payload()).service_tier, "default");
+	assert.equal(Object.hasOwn(await app.payload(), "service_tier"), false);
 	app.setBranch(enabledBranch);
 	await app.emit("session_tree");
-	assert.equal((await app.payload()).service_tier, "fast");
+	assert.equal((await app.payload()).service_tier, "priority");
 	app.setBranch([]);
 	await app.start();
-	assert.equal((await app.payload()).service_tier, "default");
+	assert.equal(Object.hasOwn(await app.payload(), "service_tier"), false);
 });
 
 test("reload reads config but preserves a saved Fast override", async (t) => {
@@ -189,7 +234,7 @@ test("reload reads config but preserves a saved Fast override", async (t) => {
 	app.writeConfig({ openai: { fast: true, webSearch: true } });
 	await app.start();
 	const result = await app.payload();
-	assert.equal(result.service_tier, "default");
+	assert.equal(Object.hasOwn(result, "service_tier"), false);
 	assert.deepEqual(result.tools, [{ type: "web_search" }]);
 });
 
@@ -198,6 +243,7 @@ test("invalid config cannot leave a previously enabled configuration active", as
 	await app.start();
 	app.writeConfig({ openai: { fast: "yes" } });
 	await assert.rejects(app.start());
+	assert.equal(app.statuses.size, 0);
 	const payload = { model: "test-model" };
 	assert.strictEqual(await app.payload(payload), payload);
 	await app.command("on");
@@ -315,7 +361,7 @@ test("overlapping streams use per-response terminal citations rather than mixing
 	await app.raw({ type: "response.output_text.annotation.added", annotation: citation("https://main.example/") });
 	await app.begin("warm");
 	await app.raw({ type: "response.output_text.annotation.added", annotation: citation("https://warm.example/") });
-	await app.raw({ type: "response.completed", response: { id: "warm", service_tier: "fast", output: [outputItem("Warm.", [citation("https://warm.example/")])] } });
+	await app.raw({ type: "response.completed", response: { id: "warm", service_tier: "priority", output: [outputItem("Warm.", [citation("https://warm.example/")])] } });
 	await app.raw({ type: "response.completed", response: { id: "main", service_tier: "default", output: [outputItem("Answer.", [citation("https://main.example/")])] } });
 	const result = await app.end(assistant(undefined, { responseId: "main" }));
 	assert.ok(fullText(result).includes("https://main.example/"));
@@ -376,7 +422,7 @@ test("non-interactive mode still applies payloads and preserves source links", a
 	app.ctx.hasUI = false;
 	app.ctx.ui.setStatus = () => { throw new Error("No UI"); };
 	await app.start();
-	assert.equal((await app.payload()).service_tier, "fast");
+	assert.equal((await app.payload()).service_tier, "priority");
 	await app.begin();
 	await app.raw({ type: "response.web_search_call.searching" });
 	await app.raw({ type: "response.output_text.annotation.added", annotation: citation() });
@@ -385,7 +431,7 @@ test("non-interactive mode still applies payloads and preserves source links", a
 });
 
 test("shutdown releases extension statuses and pending response data", async (t) => {
-	const app = setup(t, { openai: { webSearch: true } });
+	const app = setup(t, { openai: { fast: true, webSearch: true } });
 	await app.start();
 	await app.begin();
 	await app.raw({ type: "response.web_search_call.searching" });

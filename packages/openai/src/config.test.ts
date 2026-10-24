@@ -16,8 +16,8 @@ function sandbox(t: TestContext) {
 		cwd,
 		write(scope: "global" | "local", value: unknown) {
 			const path = scope === "global"
-				? join(home, ".pi", "agent", "pi-lab", "openai.json")
-				: join(cwd, ".pi", "pi-lab", "openai.json");
+				? join(home, ".pi", "agent", "settings.json")
+				: join(cwd, ".pi", "settings.json");
 			mkdirSync(dirname(path), { recursive: true });
 			writeFileSync(path, typeof value === "string" ? value : JSON.stringify(value));
 		},

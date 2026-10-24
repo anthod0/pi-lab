@@ -1,6 +1,10 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+/**
+ * Returns the global pi-lab directory, used for legacy configuration and plugin data.
+ * Prefer ~/.pi/agent/settings.json for plugin configuration.
+ */
 export function getPiLabGlobalDir(home = homedir()): string {
 	return join(home, ".pi", "agent", "pi-lab");
 }
@@ -10,6 +14,10 @@ export function getPiLabGlobalTmpDir(name?: string, home = homedir()): string {
 	return name ? join(tmpDir, name) : tmpDir;
 }
 
+/**
+ * Returns the local pi-lab directory, used for legacy configuration and plugin data.
+ * Prefer <cwd>/.pi/settings.json for plugin configuration.
+ */
 export function getPiLabLocalDir(cwd = process.cwd()): string {
 	return join(cwd, ".pi", "pi-lab");
 }

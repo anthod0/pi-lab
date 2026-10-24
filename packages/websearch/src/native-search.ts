@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { getPiLabGlobalDir, getPiLabLocalDir } from "@pi-lab/utils";
+import { readPiProjectSettings, readPiUserSettings } from "@pi-lab/utils";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 // Deliberately independent of @pi-lab/openai so either extension can be installed alone.
@@ -14,8 +12,8 @@ export function loadConfig(cwd: string, home?: string): OpenAIConfig {
   return {
     fast: false,
     webSearch: false,
-    ...readConfig(join(getPiLabGlobalDir(home), "openai.json")),
-    ...readConfig(join(getPiLabLocalDir(cwd), "openai.json")),
+    ...readConfig(() => readPiUserSettings(home), "global"),
+    ...readConfig(() => readPiProjectSettings(cwd), "project"),
   };
 }
 
@@ -25,17 +23,9 @@ export function isNativeWebSearchEnabled(config: OpenAIConfig | undefined, ctx: 
     model.baseUrl.replace(/\/$/, "") === "https://api.openai.com/v1" && ctx.modelRegistry.isUsingOAuth(model);
 }
 
-function readConfig(path: string): Partial<OpenAIConfig> {
-  let text: string;
+function readConfig(readSettings: () => unknown, scope: string): Partial<OpenAIConfig> {
   try {
-    text = readFileSync(path, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
-    throw error;
-  }
-
-  try {
-    const root: unknown = JSON.parse(text);
+    const root = readSettings();
     if (!isObject(root)) throw new Error("expected a JSON object");
     if (root.openai === undefined) return {};
     if (!isObject(root.openai)) throw new Error("openai must be an object");
@@ -48,7 +38,7 @@ function readConfig(path: string): Partial<OpenAIConfig> {
     }
     return config;
   } catch (error) {
-    throw new Error(`Invalid OpenAI config ${path}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Invalid OpenAI config in ${scope} settings.json: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

@@ -22,10 +22,10 @@ async function setup(t: TestContext, initialOAuth: boolean) {
   const home = join(testRoot.path, "home");
   const cwd = join(testRoot.path, "project");
   const agentDir = join(home, ".pi", "agent");
-  mkdirSync(join(cwd, ".pi", "pi-lab"), { recursive: true });
+  mkdirSync(join(cwd, ".pi"), { recursive: true });
   mkdirSync(agentDir, { recursive: true });
   function setNativeSearch(enabled: boolean) {
-    writeFileSync(join(cwd, ".pi", "pi-lab", "openai.json"), JSON.stringify({ openai: { webSearch: enabled } }));
+    writeFileSync(join(cwd, ".pi", "settings.json"), JSON.stringify({ openai: { webSearch: enabled } }));
   }
   setNativeSearch(true);
   let oauth = initialOAuth;

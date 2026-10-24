@@ -48,8 +48,8 @@ function setup(t: TestContext, order: Order = "openai-first", config?: unknown) 
   };
   function writeConfig(value: unknown, scope: "global" | "project" = "project") {
     const path = scope === "global"
-      ? join(home, ".pi", "agent", "pi-lab", "openai.json")
-      : join(cwd, ".pi", "pi-lab", "openai.json");
+      ? join(home, ".pi", "agent", "settings.json")
+      : join(cwd, ".pi", "settings.json");
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, JSON.stringify(value));
   }

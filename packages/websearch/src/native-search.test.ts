@@ -16,8 +16,8 @@ function configFiles(t: TestContext) {
     home, cwd,
     write(scope: "global" | "project", text: string) {
       const path = scope === "global"
-        ? join(home, ".pi", "agent", "pi-lab", "openai.json")
-        : join(cwd, ".pi", "pi-lab", "openai.json");
+        ? join(home, ".pi", "agent", "settings.json")
+        : join(cwd, ".pi", "settings.json");
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, text);
     },
@@ -55,6 +55,13 @@ for (const invalid of ["{", "null", "[]", '{"openai":null}', '{"openai":[]}',
     for (const load of loaders) assert.throws(() => load(files.cwd, files.home), /Invalid OpenAI config/);
   });
 }
+
+test("both extensions read OpenAI settings alongside unrelated Pi and extension settings", (t) => {
+  const files = configFiles(t);
+  files.write("global", JSON.stringify({ theme: "dark", openai: { fast: true } }));
+  files.write("project", JSON.stringify({ websearch: { provider: "exa" }, openai: { webSearch: true } }));
+  for (const load of loaders) assert.deepEqual(load(files.cwd, files.home), { fast: true, webSearch: true });
+});
 
 test("neither extension masks invalid global config with a valid project override", (t) => {
   const files = configFiles(t);
