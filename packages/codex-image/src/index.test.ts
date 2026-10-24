@@ -18,6 +18,7 @@ function setup() {
     args: {}, toolCallId: "image-1", invalidate() {}, lastComponent: undefined,
     state: {}, cwd: "/unused", executionStarted: false, argsComplete: false,
     isPartial: true, expanded: false, showImages: true, isError: false,
+    durationMs: undefined, outputPad: 0,
   };
   function render(args: Record<string, unknown>) {
     context.args = args;

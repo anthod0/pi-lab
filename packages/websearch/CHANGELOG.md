@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-10-25
+## [1.3.2] - 2026-10-25
 
 ### Fixed
 
@@ -59,8 +59,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` peer dependency ranges to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.1...HEAD
-[1.3.1]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.0...websearch@1.3.1
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.2...HEAD
+[1.3.2]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.0...websearch@1.3.2
 [1.3.0]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.2...websearch@1.3.0
 [1.2.2]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.1...websearch@1.2.2
 [1.2.1]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.0...websearch@1.2.1
