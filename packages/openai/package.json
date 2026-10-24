@@ -1,6 +1,6 @@
 {
   "name": "@pi-lab/openai",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenAI ChatGPT Fast mode and native web search for pi",
   "scripts": {
     "test": "tsx --test src/**/*.test.ts",

@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
+import { includeNativeSearch } from "./compaction";
 import { isNativeWebSearchEnabled, isOpenAIChatGPTModel, loadConfig, type OpenAIConfig } from "./policy";
 import { readReplayRecord, ResponseOutput, restoreInput } from "./replay";
 
@@ -64,6 +65,7 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 		restoreFast(ctx);
 	});
 
+	pi.on("session_before_compact", (event) => includeNativeSearch(event));
 	pi.on("session_tree", (_event, ctx) => restoreFast(ctx));
 	pi.on("model_select", (_event, ctx) => {
 		lastTier = undefined;

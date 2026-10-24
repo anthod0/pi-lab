@@ -1,12 +1,19 @@
 # Changelog
 
-## Unreleased
+## [Unreleased]
+
+## [0.1.1] - 2026-10-25
+
+### Changed
+
+- Read the `openai` section from Pi's user and project `settings.json` files instead of separate `openai.json` files.
 
 ### Fixed
 
-- Preserve original OpenAI output items in session entries and replay them on same-model requests without modifying assistant messages or adding summaries.
-- Retain streamed search calls and citations when the terminal response contains an empty output array.
-- Keep cache-warming replay consistent and isolate overlapping response streams, including streams spanning turn boundaries.
+- Apply Fast mode consistently to eligible requests and omit the service tier when Fast mode is off.
+- Preserve native search actions and citations across subsequent requests and session reloads without changing assistant answers.
+- Retain streamed search records even when the final response contains an empty output array, and prevent overlapping requests from mixing their records.
+- Include recorded native search actions and available source data in context-compaction input while respecting branch boundaries and context edits.
 
 ## [0.1.0] - 2026-10-23
 
