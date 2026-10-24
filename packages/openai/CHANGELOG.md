@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserve original OpenAI output items in session entries and replay them on same-model requests without modifying assistant messages or adding summaries.
+- Retain streamed search calls and citations when the terminal response contains an empty output array.
+- Keep cache-warming replay consistent and isolate overlapping response streams, including streams spanning turn boundaries.
+
 ## [0.1.0] - 2026-10-23
 
 ### Added
