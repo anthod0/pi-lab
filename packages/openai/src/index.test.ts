@@ -104,7 +104,7 @@ test("enabled features preserve payload fields and tools without mutation", asyn
 	assert.equal(result.service_tier, "priority");
 	assert.deepEqual(result.tools, [...payload.tools, { type: "web_search" }]);
 	assert.deepEqual(result.input, []);
-	assert.deepEqual(result.include, ["reasoning.encrypted_content"]);
+	assert.deepEqual(result.include, ["reasoning.encrypted_content", "web_search_call.action.sources"]);
 	assert.equal(result.store, false);
 	assert.deepEqual(payload, original);
 });
@@ -114,7 +114,13 @@ test("existing native search configuration is not duplicated or overwritten", as
 	await app.start();
 	for (const type of ["web_search", "web_search_2025_08_26", "web_search_preview", "web_search_preview_2025_03_11"]) {
 		const tools = [{ type, search_context_size: "low" }];
-		assert.deepEqual((await app.payload({ model: "test-model", tools })).tools, tools);
+		const include = ["web_search_call.action.sources", "reasoning.encrypted_content"];
+		const payload = { model: "test-model", tools, include };
+		const original = structuredClone(payload);
+		const result = await app.payload(payload);
+		assert.deepEqual(result.tools, tools);
+		assert.deepEqual(result.include, include);
+		assert.deepEqual(payload, original);
 	}
 });
 

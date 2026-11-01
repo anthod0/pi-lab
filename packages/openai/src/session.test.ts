@@ -35,7 +35,7 @@ test("real Pi session replays native items, executes local tools, retries and re
 
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
 	mkdirSync(agentDir, { recursive: true });
-	writeFileSync(join(cwd, ".pi", "settings.json"), JSON.stringify({ openai: { webSearch: true } }));
+	writeFileSync(join(cwd, ".pi", "settings.json"), JSON.stringify({ openai: { fast: true, webSearch: true } }));
 	const modelRuntime = await ModelRuntime.create({
 		authPath: join(agentDir, "auth.json"), modelsPath: null, modelsStorePath: join(agentDir, "models-cache.json"),
 		allowModelNetwork: false, refreshOnCreate: false,
@@ -69,13 +69,17 @@ test("real Pi session replays native items, executes local tools, retries and re
 	const errors: unknown[] = [];
 	await session.bindExtensions({ onError: (error) => errors.push(error) });
 	const first = [
-		{ type: "web_search_call", id: "ws_search", status: "completed", action: { type: "search", query: "news", queries: ["news"] } },
+		{ type: "web_search_call", id: "ws_search", status: "completed", action: {
+			type: "search", query: "news", queries: ["news"],
+			sources: [{ type: "url", url: "https://example.com/consulted-source" }],
+		} },
 		{ type: "function_call", id: "fc_echo", call_id: "call_echo", name: "echo", arguments: '{ "value": "local result" }', status: "completed" },
 	];
 	const second = [answer("msg_second")];
 	const payloads: any[] = [];
 	const transport = async (_url: unknown, init?: RequestInit) => {
 		const body = JSON.parse(init!.body as string);
+		assert.deepEqual(body.include, ["web_search_call.action.sources"]);
 		payloads.push(body);
 		if (payloads.length === 1) return new Response(JSON.stringify({ error: { message: "Temporary failure", type: "server_error" } }), {
 			status: 503, headers: { "Content-Type": "application/json", "retry-after-ms": "1" },
@@ -109,4 +113,15 @@ test("real Pi session replays native items, executes local tools, retries and re
 	const stored = session.messages.filter((message) => message.role === "assistant");
 	assert.equal(stored.length, 3);
 	assert.equal(stored[1].content.filter((part) => part.type === "text").length, 1);
+	// Fast must reach the HTTP body, including retries, tool continuations and cache warming.
+	assert.deepEqual(payloads.map((payload) => payload.service_tier), Array(5).fill("priority"));
+	await session.prompt("/fast off");
+	await session.prompt("Continue with standard processing.");
+	assert.equal(payloads.length, 6);
+	assert.equal(Object.hasOwn(payloads[5], "service_tier"), false);
+	await session.prompt("/fast on");
+	await session.prompt("Continue with Fast processing.");
+	assert.equal(payloads.length, 7);
+	assert.equal(payloads[6].service_tier, "priority");
+	assert.deepEqual(errors, []);
 });

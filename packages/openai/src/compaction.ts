@@ -24,8 +24,7 @@ export function includeNativeSearch(event: SessionBeforeCompactEvent): void {
 			!message.responseId || message.stopReason === "error" || message.stopReason === "aborted") return [message];
 		const record = records.get(message.responseId);
 		// Context edits and earlier compaction hooks must win over saved provider output.
-		if (!record || record.model !== message.model || !isDeepStrictEqual(originals.get(message.responseId), message) ||
-			!record.output.some((item) => item.type === "web_search_call")) return [message];
+		if (!record || record.model !== message.model || !isDeepStrictEqual(originals.get(message.responseId), message)) return [message];
 		return expandResponse(message, record);
 	});
 	// Replace the arrays with request-local copies. Their original message objects may be shared with session history.
@@ -64,8 +63,18 @@ function expandResponse(message: AssistantMessage, record: ReplayRecord): AgentM
 		if (!type) continue;
 		const block = message.content[blockIndex++];
 		if (!block || block.type !== type) return [message];
+		const content = structuredClone(block);
+		if (item.type === "message" && content.type === "text" && Array.isArray(item.content)) {
+			const citations = item.content.flatMap((part) => {
+				if (part.type !== "output_text" || !Array.isArray(part.annotations)) return [];
+				const annotations = part.annotations.filter((annotation: { type: string }) => annotation.type === "url_citation");
+				// Keep the original text with its annotations so offsets refer to the correct content part.
+				return annotations.length > 0 ? [{ text: part.text, annotations }] : [];
+			});
+			if (citations.length > 0) content.text += `\n\n[Web citations]\n${JSON.stringify(citations)}`;
+		}
 		// Separate items so Pi's serializer cannot move answer text ahead of the search that produced it.
-		messages.push({ ...message, content: [structuredClone(block)] });
+		messages.push({ ...message, content: [content] });
 	}
 	return blockIndex === message.content.length ? messages : [message];
 }

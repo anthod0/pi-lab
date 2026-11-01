@@ -7,6 +7,7 @@ import { readReplayRecord, ResponseOutput, restoreInput } from "./replay";
 const FAST_ENTRY = "pi-lab:openai-fast";
 const FAST_STATUS = "pi-lab:openai-fast";
 const OUTPUT_ENTRY = "pi-lab:openai-output";
+const SEARCH_SOURCES = "web_search_call.action.sources";
 const SEARCH_TOOLS = new Set(["web_search", "web_search_2025_08_26", "web_search_preview", "web_search_preview_2025_03_11"]);
 
 type RequestState = {
@@ -150,6 +151,8 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 		if (fast) result.service_tier = "priority";
 		else delete result.service_tier;
 		if (!webSearch) return result;
+		const include: unknown[] = Array.isArray(payload.include) ? payload.include : [];
+		result.include = include.includes(SEARCH_SOURCES) ? include : [...include, SEARCH_SOURCES];
 		const tools: unknown[] = Array.isArray(payload.tools) ? payload.tools : [];
 		if (tools.some((tool) => SEARCH_TOOLS.has(String(object(tool)?.type)))) {
 			return result;

@@ -16,6 +16,14 @@ function search(id: string, query: string): any {
 	return { type: "web_search_call", id, status: "completed", action: { type: "search", queries: [query] } };
 }
 
+function citedAnswer(id: string): any {
+	const item = text(id, "A claim supported by the source.");
+	item.content[0].annotations = [{
+		type: "url_citation", url: `https://example.com/${id}`, title: `Source for ${id}`, start_index: 0, end_index: 7,
+	}];
+	return item;
+}
+
 function response(id: string, output: any[]): Response {
 	const events: any[] = [{ type: "response.created", response: { id } }];
 	for (const [output_index, item] of output.entries()) {
@@ -207,6 +215,31 @@ test("compaction after reload enriches the summary without modifying stored mess
 	assert.deepEqual(app.manager.getEntries().slice(0, original.length), original);
 	assert.equal(app.manager.getEntries().at(-1)?.type, "compaction");
 });
+
+for (const separateResponse of [false, true]) {
+	test(`compaction preserves annotation-only citations and their text; tool continuation=${separateResponse}`, async (t) => {
+		const app = await setup(t);
+		const answer = citedAnswer("annotation-only");
+		const output = [search("ws_cited", "citation-query")];
+		if (separateResponse) {
+			output.push({ type: "function_call", id: "fc_cited", call_id: "call_cited", name: "echo", arguments: '{"value":"done"}' });
+			await app.prompt("Research.", output, [answer]);
+		} else {
+			await app.prompt("Research.", [...output, answer]);
+		}
+		app.keepTail();
+		const original = structuredClone(app.manager.getEntries());
+		await app.session.reload();
+		await app.session.compact();
+		const summary = app.summaries()[0];
+		assert.ok(summary.includes(answer.content[0].text));
+		assert.ok(summary.includes(answer.content[0].annotations[0].url));
+		assert.ok(summary.includes(answer.content[0].annotations[0].title));
+		assert.deepEqual(app.manager.getEntries().slice(0, original.length), original);
+		// Citation metadata belongs to the answer, not to an invented web-search result.
+		assert.ok(app.summaryInputs[0].every((message) => message.role !== "toolResult" || message.toolName !== "web_search"));
+	});
+}
 
 for (const nextRequest of ["ordinary turn", "repeat compaction"]) {
 	test(`compacted native records do not reappear in the next ${nextRequest}`, async (t) => {
