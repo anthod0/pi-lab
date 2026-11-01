@@ -12,6 +12,7 @@
     "test": "tsx --test src/**/*.test.ts"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"
@@ -19,5 +20,8 @@
   "files": [
     "src",
     "!src/**/*.test.ts"
-  ]
+  ],
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "catalog:peer"
+  }
 }

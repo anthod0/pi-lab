@@ -38,7 +38,7 @@ export default function (pi: ExtensionAPI, options: WebSearchToolOptions = {}) {
     }
     openaiConfig = undefined;
     try {
-      openaiConfig = loadConfig(ctx.cwd, options.home);
+      openaiConfig = loadConfig(ctx.cwd, options.agentDir);
     } finally {
       // A broken OpenAI config disables native search, not the independent provider.
       updateTool(ctx);

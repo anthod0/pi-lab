@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempDisposableSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -10,13 +11,13 @@ import { loadConfig as loadWebsearchConfig } from "./native-search.js";
 function configFiles(t: TestContext) {
   const testRoot = mkdtempDisposableSync(join(tmpdir(), "pi-search-config-parity-"));
   t.after(() => testRoot.remove());
-  const home = join(testRoot.path, "home");
+  const agentDir = join(testRoot.path, "custom agent");
   const cwd = join(testRoot.path, "project");
   return {
-    home, cwd,
+    agentDir, cwd,
     write(scope: "global" | "project", text: string) {
       const path = scope === "global"
-        ? join(home, ".pi", "agent", "settings.json")
+        ? join(agentDir, "settings.json")
         : join(cwd, ".pi", "settings.json");
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, text);
@@ -28,9 +29,23 @@ function configFiles(t: TestContext) {
 // used as the other's expected result, so a common regression still fails.
 const loaders = [loadOpenAIConfig, loadWebsearchConfig];
 
+test("both extensions read native search settings from PI_CODING_AGENT_DIR without injection", (t) => {
+  const files = configFiles(t);
+  files.write("global", JSON.stringify({ openai: { fast: true, webSearch: true } }));
+  const result = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `
+    import { loadConfig as openai } from ${JSON.stringify(new URL("../../openai/src/config.ts", import.meta.url).href)};
+    import { loadConfig as websearch } from ${JSON.stringify(new URL("./native-search.ts", import.meta.url).href)};
+    console.log(JSON.stringify([openai, websearch].map(load => load(${JSON.stringify(files.cwd)}))));
+  `], { env: { ...process.env, PI_CODING_AGENT_DIR: files.agentDir }, encoding: "utf8" });
+  assert.deepEqual(JSON.parse(result), [
+    { fast: true, webSearch: true },
+    { fast: true, webSearch: true },
+  ]);
+});
+
 test("both extensions default to disabling native search without configuration", (t) => {
   const files = configFiles(t);
-  for (const load of loaders) assert.deepEqual(load(files.cwd, files.home), { fast: false, webSearch: false });
+  for (const load of loaders) assert.deepEqual(load(files.cwd, files.agentDir), { fast: false, webSearch: false });
 });
 
 for (const [project, expected] of [
@@ -43,7 +58,7 @@ for (const [project, expected] of [
     const files = configFiles(t);
     files.write("global", JSON.stringify({ openai: { fast: true, webSearch: true } }));
     files.write("project", JSON.stringify(project));
-    for (const load of loaders) assert.deepEqual(load(files.cwd, files.home), expected);
+    for (const load of loaders) assert.deepEqual(load(files.cwd, files.agentDir), expected);
   });
 }
 
@@ -52,7 +67,7 @@ for (const invalid of ["{", "null", "[]", '{"openai":null}', '{"openai":[]}',
   test(`both extensions reject invalid config: ${invalid}`, (t) => {
     const files = configFiles(t);
     files.write("project", invalid);
-    for (const load of loaders) assert.throws(() => load(files.cwd, files.home), /Invalid OpenAI config/);
+    for (const load of loaders) assert.throws(() => load(files.cwd, files.agentDir), /Invalid OpenAI config/);
   });
 }
 
@@ -60,12 +75,12 @@ test("both extensions read OpenAI settings alongside unrelated Pi and extension 
   const files = configFiles(t);
   files.write("global", JSON.stringify({ theme: "dark", openai: { fast: true } }));
   files.write("project", JSON.stringify({ websearch: { provider: "exa" }, openai: { webSearch: true } }));
-  for (const load of loaders) assert.deepEqual(load(files.cwd, files.home), { fast: true, webSearch: true });
+  for (const load of loaders) assert.deepEqual(load(files.cwd, files.agentDir), { fast: true, webSearch: true });
 });
 
 test("neither extension masks invalid global config with a valid project override", (t) => {
   const files = configFiles(t);
   files.write("global", '{"openai":{"fast":"true"}}');
   files.write("project", '{"openai":{"fast":false,"webSearch":true}}');
-  for (const load of loaders) assert.throws(() => load(files.cwd, files.home), /Invalid OpenAI config/);
+  for (const load of loaders) assert.throws(() => load(files.cwd, files.agentDir), /Invalid OpenAI config/);
 });

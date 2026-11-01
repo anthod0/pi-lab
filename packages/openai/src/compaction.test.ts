@@ -32,9 +32,9 @@ async function setup(t: TestContext, automatic = false) {
 	const root = mkdtempDisposableSync(join(tmpdir(), "pi-openai-compaction-"));
 	let dispose = () => {};
 	t.after(() => { dispose(); root.remove(); });
-	const home = join(root.path, "home");
+	const agentDir = join(root.path, "custom agent");
 	const cwd = join(root.path, "project");
-	const agentDir = join(home, ".pi", "agent");
+
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
 	mkdirSync(agentDir, { recursive: true });
 	writeFileSync(join(cwd, ".pi", "settings.json"), JSON.stringify({ openai: { webSearch: true } }));
@@ -54,7 +54,7 @@ async function setup(t: TestContext, automatic = false) {
 		cwd, agentDir, settingsManager, noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true,
 		agentsFilesOverride: () => ({ agentsFiles: [] }),
 		extensionFactories: [
-			(pi) => openai(pi, { home }),
+			(pi) => openai(pi, { agentDir }),
 			(pi) => {
 				pi.on("session_before_compact", ({ preparation }) => {
 					summaryInputs.push(structuredClone([...preparation.messagesToSummarize, ...preparation.turnPrefixMessages]));

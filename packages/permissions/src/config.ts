@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import {
   getPiLabGlobalDir,
@@ -71,12 +70,12 @@ function loadRulesWithLegacyPriority(
   return loadRulesFromSettings(readSettings);
 }
 
-export function loadConfig(cwd: string, home = os.homedir()): PermissionConfig {
-  const globalConfigPath = path.join(getPiLabGlobalDir(home), "permissions.json");
+export function loadConfig(cwd: string, agentDir?: string): PermissionConfig {
+  const globalConfigPath = path.join(getPiLabGlobalDir(agentDir), "permissions.json");
   const localConfigPath = path.join(getPiLabLocalDir(cwd), "permissions.json");
 
   const globalRules = loadRulesWithLegacyPriority(globalConfigPath, () =>
-    readPiUserSettings(home),
+    readPiUserSettings(agentDir),
   );
   const localRules = loadRulesWithLegacyPriority(localConfigPath, () =>
     readPiProjectSettings(cwd),

@@ -10,6 +10,7 @@ type PermissionsAskEvent = {
 };
 
 type NotifyDeps = {
+	agentDir?: string;
 	home?: string;
 	env?: NodeJS.ProcessEnv;
 	sendNotification?: (title: string, message: string) => void;
@@ -33,7 +34,7 @@ export default function (pi: ExtensionAPI, deps: NotifyDeps = {}) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		currentCwd = ctx.cwd;
-		config = loadConfig(ctx.cwd, deps.home);
+		config = loadConfig(ctx.cwd, deps.agentDir, deps.home);
 	});
 
 	pi.on("agent_settled", async () => {

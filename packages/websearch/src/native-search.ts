@@ -8,11 +8,11 @@ export interface OpenAIConfig {
   webSearch: boolean;
 }
 
-export function loadConfig(cwd: string, home?: string): OpenAIConfig {
+export function loadConfig(cwd: string, agentDir?: string): OpenAIConfig {
   return {
     fast: false,
     webSearch: false,
-    ...readConfig(() => readPiUserSettings(home), "global"),
+    ...readConfig(() => readPiUserSettings(agentDir), "global"),
     ...readConfig(() => readPiProjectSettings(cwd), "project"),
   };
 }

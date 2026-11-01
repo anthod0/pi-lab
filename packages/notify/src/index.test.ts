@@ -37,6 +37,7 @@ function setup(config?: unknown, env: NodeJS.ProcessEnv = {}) {
 
 	notify(pi as any, {
 		home,
+		agentDir: join(home, "custom agent"),
 		env,
 		sendNotification(title, message) {
 			sent.push({ title, message });
@@ -187,6 +188,7 @@ test("script hook errors are warned and do not stop notifications", async () => 
 	};
 	notify(pi as any, {
 		home,
+		agentDir: join(home, "custom agent"),
 		env: {},
 		sendNotification(title, message) {
 			sent.push({ title, message });

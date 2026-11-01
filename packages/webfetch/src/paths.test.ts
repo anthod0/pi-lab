@@ -3,9 +3,9 @@ import test from "node:test";
 
 import { getBinaryTempDir } from "./paths";
 
-test("getBinaryTempDir resolves ~/.pi/agent/pi-lab/tmp/webfetch", () => {
+test("getBinaryTempDir resolves pi-lab/tmp/webfetch beneath the supplied agent directory", () => {
 	assert.equal(
-		getBinaryTempDir("/tmp/home"),
-		"/tmp/home/.pi/agent/pi-lab/tmp/webfetch",
+		getBinaryTempDir("/tmp/custom agent"),
+		"/tmp/custom agent/pi-lab/tmp/webfetch",
 	);
 });

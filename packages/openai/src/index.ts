@@ -19,7 +19,7 @@ type RequestState = {
 	tier?: string;
 };
 
-export default function openai(pi: ExtensionAPI, options: { home?: string } = {}): void {
+export default function openai(pi: ExtensionAPI, options: { agentDir?: string } = {}): void {
 	let config: OpenAIConfig | undefined;
 	let fast = false;
 	let request: RequestState | undefined;
@@ -58,7 +58,7 @@ export default function openai(pi: ExtensionAPI, options: { home?: string } = {}
 		lastTier = undefined;
 		clearRequest();
 		try {
-			config = loadConfig(ctx.cwd, options.home);
+			config = loadConfig(ctx.cwd, options.agentDir);
 		} finally {
 			updateStatus(ctx);
 		}

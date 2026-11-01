@@ -19,9 +19,9 @@ async function setup(t: TestContext, initialOAuth: boolean) {
   const testRoot = mkdtempDisposableSync(join(tmpdir(), "pi-search-sdk-"));
   let dispose = () => {};
   t.after(() => { dispose(); testRoot.remove(); });
-  const home = join(testRoot.path, "home");
+  const agentDir = join(testRoot.path, "custom agent");
   const cwd = join(testRoot.path, "project");
-  const agentDir = join(home, ".pi", "agent");
+
   mkdirSync(join(cwd, ".pi"), { recursive: true });
   mkdirSync(agentDir, { recursive: true });
   function setNativeSearch(enabled: boolean) {
@@ -48,8 +48,8 @@ async function setup(t: TestContext, initialOAuth: boolean) {
     noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true,
     agentsFilesOverride: () => ({ agentsFiles: [] }),
     extensionFactories: [
-      (pi) => websearch(pi, { home }),
-      (pi) => openai(pi, { home }),
+      (pi) => websearch(pi, { agentDir }),
+      (pi) => openai(pi, { agentDir }),
       (pi) => pi.registerTool({
         name: "switch_auth", label: "Switch", description: "Change test authentication", parameters: Type.Object({}),
         async execute() { oauth = !oauth; return { content: [], details: undefined }; },

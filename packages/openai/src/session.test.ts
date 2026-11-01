@@ -30,9 +30,9 @@ test("real Pi session replays native items, executes local tools, retries and re
 	const root = mkdtempDisposableSync(join(tmpdir(), "pi-openai-sdk-"));
 	let dispose = () => {};
 	t.after(() => { dispose(); root.remove(); });
-	const home = join(root.path, "home");
+	const agentDir = join(root.path, "custom agent");
 	const cwd = join(root.path, "project");
-	const agentDir = join(home, ".pi", "agent");
+
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
 	mkdirSync(agentDir, { recursive: true });
 	writeFileSync(join(cwd, ".pi", "settings.json"), JSON.stringify({ openai: { webSearch: true } }));
@@ -49,7 +49,7 @@ test("real Pi session replays native items, executes local tools, retries and re
 		cwd, agentDir, settingsManager, noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true,
 		agentsFilesOverride: () => ({ agentsFiles: [] }),
 		extensionFactories: [
-			(pi) => openai(pi, { home }),
+			(pi) => openai(pi, { agentDir }),
 			(pi) => pi.registerTool({
 				name: "echo", label: "Echo", description: "Echo a test value", parameters: Type.Object({ value: Type.String() }),
 				async execute(_id, args) { executions.push(args); return { content: [{ type: "text", text: args.value }], details: undefined }; },

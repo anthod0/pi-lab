@@ -10,7 +10,7 @@ import { searchTinyfish } from "./tinyfish.js";
 export interface WebSearchToolOptions {
   env?: NodeJS.ProcessEnv;
   fetcher?: typeof fetch;
-  home?: string;
+  agentDir?: string;
   provider?: WebSearchProvider;
   exposure?: "direct" | "hidden";
   defaultActive?: boolean;
@@ -48,7 +48,7 @@ export function registerWebSearchTool(pi: ExtensionAPI, options: WebSearchToolOp
         cwd: ctx.cwd,
         projectTrusted: ctx.isProjectTrusted(),
         env,
-        home: options.home,
+        agentDir: options.agentDir,
       });
       const providerConfig = {
         exa: { apiKeyName: "EXA_API_KEY", search: searchExa },

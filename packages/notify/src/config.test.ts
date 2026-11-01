@@ -9,13 +9,15 @@ import { loadConfig } from "./config.js";
 function setupConfigFiles() {
 	const testRoot = mkdtempSync(join(tmpdir(), "pi-notify-config-"));
 	const home = join(testRoot, "home");
+	const agentDir = join(testRoot, "custom agent");
 	const cwd = join(testRoot, "project");
 	return {
 		home,
+		agentDir,
 		cwd,
 		global: {
-			settings: join(home, ".pi", "agent", "settings.json"),
-			legacy: join(home, ".pi", "agent", "pi-lab", "notify.json"),
+			settings: join(agentDir, "settings.json"),
+			legacy: join(agentDir, "pi-lab", "notify.json"),
 		},
 		local: {
 			settings: join(cwd, ".pi", "settings.json"),
@@ -34,7 +36,7 @@ for (const scope of ["global", "local"] as const) {
 		const files = setupConfigFiles();
 		writeJson(files[scope].settings, { notify: { enable: false, script: "~/notify.sh" } });
 
-		assert.deepEqual(loadConfig(files.cwd, files.home), {
+		assert.deepEqual(loadConfig(files.cwd, files.agentDir, files.home), {
 			enable: false,
 			script: join(files.home, "notify.sh"),
 		});
@@ -45,7 +47,7 @@ for (const scope of ["global", "local"] as const) {
 		writeJson(files[scope].settings, { notify: { enable: true } });
 		writeJson(files[scope].legacy, { notify: { enable: false, script: "/legacy.sh" } });
 
-		assert.deepEqual(loadConfig(files.cwd, files.home), { enable: true });
+		assert.deepEqual(loadConfig(files.cwd, files.agentDir, files.home), { enable: true });
 	});
 
 	test(`loadConfig treats an empty ${scope} notify object as configured`, () => {
@@ -53,7 +55,7 @@ for (const scope of ["global", "local"] as const) {
 		writeJson(files[scope].settings, { notify: {} });
 		writeJson(files[scope].legacy, { notify: { enable: false, script: "/legacy.sh" } });
 
-		assert.deepEqual(loadConfig(files.cwd, files.home), { enable: true });
+		assert.deepEqual(loadConfig(files.cwd, files.agentDir, files.home), { enable: true });
 	});
 
 	for (const notify of [undefined, null, false, [], "invalid"]) {
@@ -62,7 +64,7 @@ for (const scope of ["global", "local"] as const) {
 			writeJson(files[scope].settings, { theme: "dark", notify });
 			writeJson(files[scope].legacy, { notify: { enable: false, script: "./legacy.sh" } });
 
-			assert.deepEqual(loadConfig(files.cwd, files.home), {
+			assert.deepEqual(loadConfig(files.cwd, files.agentDir, files.home), {
 				enable: false,
 				script: join(files.cwd, "legacy.sh"),
 			});
@@ -75,7 +77,7 @@ for (const scope of ["global", "local"] as const) {
 		writeJson(files[scope].legacy, {});
 		writeFileSync(files[scope].legacy, "{", "utf8");
 
-		assert.deepEqual(loadConfig(files.cwd, files.home), { enable: false });
+		assert.deepEqual(loadConfig(files.cwd, files.agentDir, files.home), { enable: false });
 	});
 
 	test(`loadConfig reports malformed ${scope} settings rather than using legacy config`, () => {
@@ -83,7 +85,7 @@ for (const scope of ["global", "local"] as const) {
 		writeJson(files[scope].legacy, { notify: { enable: false } });
 		writeFileSync(files[scope].settings, "{", "utf8");
 
-		assert.throws(() => loadConfig(files.cwd, files.home), SyntaxError);
+		assert.throws(() => loadConfig(files.cwd, files.agentDir, files.home), SyntaxError);
 	});
 }
 
@@ -94,7 +96,7 @@ for (const globalSource of ["settings", "legacy"] as const) {
 			writeJson(files.global[globalSource], { notify: { enable: false, script: "/global.sh" } });
 			writeJson(files.local[localSource], { notify: { script: "./local.sh" } });
 
-			assert.deepEqual(loadConfig(files.cwd, files.home), {
+			assert.deepEqual(loadConfig(files.cwd, files.agentDir, files.home), {
 				enable: false,
 				script: join(files.cwd, "local.sh"),
 			});
@@ -105,30 +107,33 @@ for (const globalSource of ["settings", "legacy"] as const) {
 test("loadConfig returns defaults when notify config files are absent", () => {
 	const home = mkdtempSync(join(tmpdir(), "pi-notify-home-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-notify-cwd-"));
+	const agentDir = join(home, "custom agent");
 
-	assert.deepEqual(loadConfig(cwd, home), { enable: true });
+	assert.deepEqual(loadConfig(cwd, agentDir, home), { enable: true });
 });
 
 test("loadConfig reads global notify config", () => {
 	const home = mkdtempSync(join(tmpdir(), "pi-notify-home-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-notify-cwd-"));
-	mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+	const agentDir = join(home, "custom agent");
+	mkdirSync(join(agentDir, "pi-lab"), { recursive: true });
 	writeFileSync(
-		join(home, ".pi", "agent", "pi-lab", "notify.json"),
+		join(agentDir, "pi-lab", "notify.json"),
 		JSON.stringify({ notify: { enable: false, script: "~/notify.sh" } }),
 		"utf8",
 	);
 
-	assert.deepEqual(loadConfig(cwd, home), { enable: false, script: join(home, "notify.sh") });
+	assert.deepEqual(loadConfig(cwd, agentDir, home), { enable: false, script: join(home, "notify.sh") });
 });
 
 test("loadConfig lets local notify config override global fields", () => {
 	const home = mkdtempSync(join(tmpdir(), "pi-notify-home-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-notify-cwd-"));
-	mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+	const agentDir = join(home, "custom agent");
+	mkdirSync(join(agentDir, "pi-lab"), { recursive: true });
 	mkdirSync(join(cwd, ".pi", "pi-lab"), { recursive: true });
 	writeFileSync(
-		join(home, ".pi", "agent", "pi-lab", "notify.json"),
+		join(agentDir, "pi-lab", "notify.json"),
 		JSON.stringify({ notify: { enable: false, script: "/global.sh" } }),
 		"utf8",
 	);
@@ -138,12 +143,13 @@ test("loadConfig lets local notify config override global fields", () => {
 		"utf8",
 	);
 
-	assert.deepEqual(loadConfig(cwd, home), { enable: false, script: join(cwd, "local.sh") });
+	assert.deepEqual(loadConfig(cwd, agentDir, home), { enable: false, script: join(cwd, "local.sh") });
 });
 
 test("loadConfig ignores invalid notify fields", () => {
 	const home = mkdtempSync(join(tmpdir(), "pi-notify-home-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-notify-cwd-"));
+	const agentDir = join(home, "custom agent");
 	mkdirSync(join(cwd, ".pi", "pi-lab"), { recursive: true });
 	writeFileSync(
 		join(cwd, ".pi", "pi-lab", "notify.json"),
@@ -151,5 +157,5 @@ test("loadConfig ignores invalid notify fields", () => {
 		"utf8",
 	);
 
-	assert.deepEqual(loadConfig(cwd, home), { enable: true });
+	assert.deepEqual(loadConfig(cwd, agentDir, home), { enable: true });
 });

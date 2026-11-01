@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 export type PiSettings = Record<string, unknown>;
 
@@ -20,13 +20,13 @@ export function readPiProjectSettings(cwd = process.cwd()): PiSettings {
 	return readJsonFile(join(cwd, ".pi", "settings.json"));
 }
 
-export function readPiUserSettings(home = homedir()): PiSettings {
-	return readJsonFile(join(home, ".pi", "agent", "settings.json"));
+export function readPiUserSettings(agentDir = getAgentDir()): PiSettings {
+	return readJsonFile(join(agentDir, "settings.json"));
 }
 
 export interface ReadMergedPiSettingsOptions {
 	cwd?: string;
-	home?: string;
+	agentDir?: string;
 }
 
 export function mergePiSettings(userSettings: PiSettings = {}, projectSettings: PiSettings = {}): PiSettings {
@@ -35,7 +35,7 @@ export function mergePiSettings(userSettings: PiSettings = {}, projectSettings: 
 
 export function readMergedPiSettings(options: ReadMergedPiSettingsOptions = {}): PiSettings {
 	return mergePiSettings(
-		readPiUserSettings(options.home),
+		readPiUserSettings(options.agentDir),
 		readPiProjectSettings(options.cwd),
 	);
 }

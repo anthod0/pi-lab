@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 import { getPiLabGlobalDir, getPiLabLocalDir } from "@pi-lab/utils";
 
@@ -14,9 +15,9 @@ type RawNotifyConfig = {
 	script?: unknown;
 };
 
-export function loadConfig(cwd = process.cwd(), home = homedir()): NotifyConfig {
-	const globalNotify = readNotifyJson(join(home, ".pi", "agent", "settings.json"))
-		?? readNotifyJson(join(getPiLabGlobalDir(home), "notify.json"));
+export function loadConfig(cwd = process.cwd(), agentDir = getAgentDir(), home = homedir()): NotifyConfig {
+	const globalNotify = readNotifyJson(join(agentDir, "settings.json"))
+		?? readNotifyJson(join(getPiLabGlobalDir(agentDir), "notify.json"));
 	const localNotify = readNotifyJson(join(cwd, ".pi", "settings.json"))
 		?? readNotifyJson(join(getPiLabLocalDir(cwd), "notify.json"));
 	return normalizeConfig({ ...globalNotify, ...localNotify }, cwd, home);

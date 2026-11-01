@@ -11,7 +11,7 @@ type Handler = (event: any, ctx: any) => any;
 function setup(t: TestContext, config?: unknown) {
 	const directory = mkdtempDisposableSync(join(tmpdir(), "pi-openai-session-"));
 	t.after(() => directory.remove());
-	const home = join(directory.path, "home");
+	const agentDir = join(directory.path, "custom agent");
 	const cwd = join(directory.path, "project");
 	const configPath = join(cwd, ".pi", "settings.json");
 	function writeConfig(value: unknown) {
@@ -43,7 +43,7 @@ function setup(t: TestContext, config?: unknown) {
 		on(name: string, handler: Handler) { handlers.set(name, handler); },
 		registerCommand(name: string, command: { handler: Handler }) { commands.set(name, command.handler); },
 		appendEntry(customType: string, data: unknown) { branch.push({ type: "custom", customType, data }); },
-	} as any, { home });
+	} as any, { agentDir });
 	const emit = async (name: string, data: object = {}) => handlers.get(name)?.({ type: name, ...data }, ctx);
 	return {
 		ctx, notices, statuses, configPath, writeConfig, emit,

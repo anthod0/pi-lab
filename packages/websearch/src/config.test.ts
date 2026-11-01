@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempDisposableSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -9,13 +10,13 @@ import { readWebSearchProvider, resolveWebSearchProvider } from "./config.js";
 function settingsFiles(t: TestContext) {
   const testRoot = mkdtempDisposableSync(join(tmpdir(), "pi-websearch-settings-"));
   t.after(() => testRoot.remove());
-  const home = join(testRoot.path, "home");
+  const agentDir = join(testRoot.path, "custom agent");
   const cwd = join(testRoot.path, "project");
   return {
-    home, cwd,
+    agentDir, cwd,
     write(scope: "global" | "project", text: string) {
       const path = scope === "global"
-        ? join(home, ".pi", "agent", "settings.json")
+        ? join(agentDir, "settings.json")
         : join(cwd, ".pi", "settings.json");
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, text);
@@ -63,6 +64,21 @@ test("user settings select the provider without loading untrusted project settin
   files.write("global", JSON.stringify({ websearch: { provider: "parallel" } }));
   files.write("project", "invalid JSON");
   assert.equal(readWebSearchProvider({ ...files, projectTrusted: false, env: {} }), "parallel");
+});
+
+test("PI_CODING_AGENT_DIR selects the provider without an injected directory", (t) => {
+  const files = settingsFiles(t);
+  files.write("global", JSON.stringify({ websearch: { provider: "parallel" } }));
+  files.write("project", JSON.stringify({ websearch: { provider: "tinyfish" } }));
+  const result = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `
+    import { readWebSearchProvider } from ${JSON.stringify(new URL("./config.ts", import.meta.url).href)};
+    const options = { cwd: ${JSON.stringify(files.cwd)}, env: { EXA_API_KEY: "test" } };
+    console.log(JSON.stringify([
+      readWebSearchProvider({ ...options, projectTrusted: false }),
+      readWebSearchProvider({ ...options, projectTrusted: true }),
+    ]));
+  `], { env: { ...process.env, PI_CODING_AGENT_DIR: files.agentDir }, encoding: "utf8" });
+  assert.deepEqual(JSON.parse(result), ["parallel", "tinyfish"]);
 });
 
 test("trusted project provider overrides user settings", (t) => {

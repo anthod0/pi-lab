@@ -12,7 +12,7 @@ const model: any = {
 	id: "test-model", provider: "openai", api: "openai-responses", baseUrl: "https://api.openai.com/v1",
 	input: ["text"], reasoning: true, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 };
-const user = (text: string): any => ({ role: "user", content: text, timestamp: 1 });
+const user = (text: string): any => ({ role: "custom agent", content: text, timestamp: 1 });
 const project = (messages: any[], target = model): any[] => convertResponsesMessages(target, normalizeContext({ messages }), new Set(["openai"]), {
 	grammarToolInputProperties: new Map([["shell", "input"]]),
 });
@@ -34,7 +34,7 @@ function setup(t: TestContext) {
 	const directory = mkdtempDisposableSync(join(tmpdir(), "pi-openai-replay-"));
 	t.after(() => directory.remove());
 	const cwd = join(directory.path, "project");
-	const home = join(directory.path, "home");
+	const agentDir = join(directory.path, "custom agent");
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
 	const configPath = join(cwd, ".pi", "settings.json");
 	const configure = (enabled: boolean) => writeFileSync(configPath, JSON.stringify({ openai: { webSearch: enabled } }));
@@ -48,7 +48,7 @@ function setup(t: TestContext) {
 	openai({
 		on(name: string, handler: any) { handlers.set(name, handler); }, registerCommand() {},
 		appendEntry(customType: string, data: unknown) { branch.push({ type: "custom", customType, data }); },
-	} as any, { home });
+	} as any, { agentDir });
 	const emit = async (type: string, event: any = {}) => handlers.get(type)?.({ type, ...event }, ctx);
 	const raw = (data: any, metadata: any = {}) => emit("provider_stream_event", { provider: "openai", api: "openai-responses", model: "test-model", data, ...metadata });
 	const payload = async (input: any[]) => {

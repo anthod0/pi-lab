@@ -7,14 +7,14 @@ import test from "node:test";
 import { loadConfig } from "./config.js";
 
 test("loadConfig reads global and local permissions from pi-lab paths", () => {
-	const home = mkdtempSync(join(tmpdir(), "pi-permissions-home-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "pi-permissions-agentDir-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-permissions-cwd-"));
 
-	mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+	mkdirSync(join(agentDir, "pi-lab"), { recursive: true });
 	mkdirSync(join(cwd, ".pi", "pi-lab"), { recursive: true });
 
 	writeFileSync(
-		join(home, ".pi", "agent", "pi-lab", "permissions.json"),
+		join(agentDir, "pi-lab", "permissions.json"),
 		JSON.stringify({
 			rules: [{ match: { tool: "bash" }, action: "allow", priority: 1 }],
 		}),
@@ -28,7 +28,7 @@ test("loadConfig reads global and local permissions from pi-lab paths", () => {
 		"utf8",
 	);
 
-	const config = loadConfig(cwd, home);
+	const config = loadConfig(cwd, agentDir);
 
 	assert.deepEqual(config.rules, [
 		{ match: { tool: "bash" }, action: "allow", priority: 1 },
@@ -37,14 +37,14 @@ test("loadConfig reads global and local permissions from pi-lab paths", () => {
 });
 
 test("loadConfig falls back to settings permissions when pi-lab files are missing", () => {
-	const home = mkdtempSync(join(tmpdir(), "pi-permissions-home-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "pi-permissions-agentDir-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-permissions-cwd-"));
 
-	mkdirSync(join(home, ".pi", "agent"), { recursive: true });
+	mkdirSync(agentDir, { recursive: true });
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
 
 	writeFileSync(
-		join(home, ".pi", "agent", "settings.json"),
+		join(agentDir, "settings.json"),
 		JSON.stringify({
 			permissions: {
 				rules: [{ match: { tool: "bash" }, action: "ask", priority: 1 }],
@@ -62,7 +62,7 @@ test("loadConfig falls back to settings permissions when pi-lab files are missin
 		"utf8",
 	);
 
-	const config = loadConfig(cwd, home);
+	const config = loadConfig(cwd, agentDir);
 
 	assert.deepEqual(config.rules, [
 		{ match: { tool: "bash" }, action: "ask", priority: 1 },
@@ -71,14 +71,14 @@ test("loadConfig falls back to settings permissions when pi-lab files are missin
 });
 
 test("loadConfig prefers pi-lab permissions over settings permissions per scope", () => {
-	const home = mkdtempSync(join(tmpdir(), "pi-permissions-home-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "pi-permissions-agentDir-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-permissions-cwd-"));
 
-	mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+	mkdirSync(join(agentDir, "pi-lab"), { recursive: true });
 	mkdirSync(join(cwd, ".pi", "pi-lab"), { recursive: true });
 
 	writeFileSync(
-		join(home, ".pi", "agent", "settings.json"),
+		join(agentDir, "settings.json"),
 		JSON.stringify({ permissions: { rules: [{ match: { tool: "global-settings" }, action: "deny" }] } }),
 		"utf8",
 	);
@@ -88,7 +88,7 @@ test("loadConfig prefers pi-lab permissions over settings permissions per scope"
 		"utf8",
 	);
 	writeFileSync(
-		join(home, ".pi", "agent", "pi-lab", "permissions.json"),
+		join(agentDir, "pi-lab", "permissions.json"),
 		JSON.stringify({ rules: [{ match: { tool: "global-legacy" }, action: "allow" }] }),
 		"utf8",
 	);
@@ -98,7 +98,7 @@ test("loadConfig prefers pi-lab permissions over settings permissions per scope"
 		"utf8",
 	);
 
-	const config = loadConfig(cwd, home);
+	const config = loadConfig(cwd, agentDir);
 
 	assert.deepEqual(config.rules, [
 		{ match: { tool: "global-legacy" }, action: "allow" },
@@ -107,14 +107,14 @@ test("loadConfig prefers pi-lab permissions over settings permissions per scope"
 });
 
 test("loadConfig falls back to settings independently for each scope", () => {
-	const home = mkdtempSync(join(tmpdir(), "pi-permissions-home-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "pi-permissions-agentDir-"));
 	const cwd = mkdtempSync(join(tmpdir(), "pi-permissions-cwd-"));
 
-	mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
+	mkdirSync(join(agentDir, "pi-lab"), { recursive: true });
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
 
 	writeFileSync(
-		join(home, ".pi", "agent", "pi-lab", "permissions.json"),
+		join(agentDir, "pi-lab", "permissions.json"),
 		JSON.stringify({ rules: [{ match: { tool: "global-legacy" }, action: "allow" }] }),
 		"utf8",
 	);
@@ -124,7 +124,7 @@ test("loadConfig falls back to settings independently for each scope", () => {
 		"utf8",
 	);
 
-	const config = loadConfig(cwd, home);
+	const config = loadConfig(cwd, agentDir);
 
 	assert.deepEqual(config.rules, [
 		{ match: { tool: "global-legacy" }, action: "allow" },

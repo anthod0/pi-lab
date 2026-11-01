@@ -10,13 +10,13 @@ function fixture(t: TestContext) {
 	const testRoot = mkdtempDisposableSync(join(tmpdir(), "pi-lab-settings-"));
 	t.after(() => testRoot.remove());
 	const cwd = join(testRoot.path, "project");
-	const home = join(testRoot.path, "home");
+	const agentDir = join(testRoot.path, "custom agent");
 	mkdirSync(join(cwd, ".pi"), { recursive: true });
-	mkdirSync(join(home, ".pi", "agent"), { recursive: true });
+	mkdirSync(agentDir, { recursive: true });
 	return {
-		cwd, home,
+		cwd, agentDir,
 		writeProject(text: string) { writeFileSync(join(cwd, ".pi", "settings.json"), text); },
-		writeUser(text: string) { writeFileSync(join(home, ".pi", "agent", "settings.json"), text); },
+		writeUser(text: string) { writeFileSync(join(agentDir, "settings.json"), text); },
 	};
 }
 
@@ -28,10 +28,10 @@ test("readPiProjectSettings parses settings from the supplied project", (t) => {
 	});
 });
 
-test("readPiUserSettings parses settings from the supplied home", (t) => {
+test("readPiUserSettings parses settings from the supplied agent directory", (t) => {
 	const files = fixture(t);
 	files.writeUser(JSON.stringify({ theme: "dark", enabledModels: ["claude-*"] }));
-	assert.deepEqual(readPiUserSettings(files.home), { theme: "dark", enabledModels: ["claude-*"] });
+	assert.deepEqual(readPiUserSettings(files.agentDir), { theme: "dark", enabledModels: ["claude-*"] });
 });
 
 test("settings readers keep project and user scopes separate", (t) => {
@@ -41,7 +41,7 @@ test("settings readers keep project and user scopes separate", (t) => {
 	assert.deepEqual(readPiProjectSettings(files.cwd), {
 		permissions: { rules: [{ match: { tool: "read" }, action: "deny" }] },
 	});
-	assert.deepEqual(readPiUserSettings(files.home), {
+	assert.deepEqual(readPiUserSettings(files.agentDir), {
 		permissions: { rules: [{ match: { tool: "bash" }, action: "ask" }] },
 	});
 });
@@ -49,7 +49,7 @@ test("settings readers keep project and user scopes separate", (t) => {
 test("settings readers return empty objects when settings.json is missing", (t) => {
 	const files = fixture(t);
 	assert.deepEqual(readPiProjectSettings(files.cwd), {});
-	assert.deepEqual(readPiUserSettings(files.home), {});
+	assert.deepEqual(readPiUserSettings(files.agentDir), {});
 });
 
 test("settings readers throw invalid JSON errors", (t) => {
@@ -57,7 +57,7 @@ test("settings readers throw invalid JSON errors", (t) => {
 	files.writeProject("{");
 	files.writeUser("{");
 	assert.throws(() => readPiProjectSettings(files.cwd), SyntaxError);
-	assert.throws(() => readPiUserSettings(files.home), SyntaxError);
+	assert.throws(() => readPiUserSettings(files.agentDir), SyntaxError);
 });
 
 test("mergePiSettings deep merges project settings over user settings", () => {
@@ -77,7 +77,7 @@ test("readMergedPiSettings reads user and project settings and applies project o
 	const files = fixture(t);
 	files.writeUser(JSON.stringify({ xsearch: { model: "user-model", enableVideoUnderstanding: true } }));
 	files.writeProject(JSON.stringify({ xsearch: { model: "project-model" } }));
-	assert.deepEqual(readMergedPiSettings({ cwd: files.cwd, home: files.home }), {
+	assert.deepEqual(readMergedPiSettings({ cwd: files.cwd, agentDir: files.agentDir }), {
 		xsearch: { model: "project-model", enableVideoUnderstanding: true },
 	});
 });

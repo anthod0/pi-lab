@@ -2,9 +2,9 @@ import { mergePiSettings, readPiProjectSettings, readPiUserSettings } from "@pi-
 
 export const DEFAULT_MODEL = "gpt-5.6-sol";
 
-export function readImageModel(cwd: string, projectTrusted: boolean, home?: string): string {
+export function readImageModel(cwd: string, projectTrusted: boolean, agentDir?: string): string {
   const settings = mergePiSettings(
-    readPiUserSettings(home),
+    readPiUserSettings(agentDir),
     projectTrusted ? readPiProjectSettings(cwd) : {},
   );
   const config = settings.codexImage;

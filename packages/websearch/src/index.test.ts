@@ -13,7 +13,7 @@ type Order = "openai-first" | "websearch-first";
 function setup(t: TestContext, order: Order = "openai-first", config?: unknown) {
   const testRoot = mkdtempDisposableSync(join(tmpdir(), "pi-search-exclusion-"));
   t.after(() => testRoot.remove());
-  const home = join(testRoot.path, "home");
+  const agentDir = join(testRoot.path, "custom agent");
   const cwd = join(testRoot.path, "project");
   const handlers = new Map<string, Handler[]>();
   const tools = new Map<string, any>();
@@ -48,13 +48,13 @@ function setup(t: TestContext, order: Order = "openai-first", config?: unknown) 
   };
   function writeConfig(value: unknown, scope: "global" | "project" = "project") {
     const path = scope === "global"
-      ? join(home, ".pi", "agent", "settings.json")
+      ? join(agentDir, "settings.json")
       : join(cwd, ".pi", "settings.json");
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, JSON.stringify(value));
   }
   if (config !== undefined) writeConfig(config);
-  const options = { home, provider: "exa" as const, env: { EXA_API_KEY: "test-key" }, fetcher: (async () => {
+  const options = { agentDir, provider: "exa" as const, env: { EXA_API_KEY: "test-key" }, fetcher: (async () => {
     return new Response(JSON.stringify({ results: [{ title: "Example", url: "https://example.com/", text: "Result" }] }), { status: 200 });
   }) as typeof fetch };
   function load() {

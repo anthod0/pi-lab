@@ -1,16 +1,16 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 /**
  * Returns the global pi-lab directory, used for legacy configuration and plugin data.
- * Prefer ~/.pi/agent/settings.json for plugin configuration.
+ * Prefer <agentDir>/settings.json for plugin configuration.
  */
-export function getPiLabGlobalDir(home = homedir()): string {
-	return join(home, ".pi", "agent", "pi-lab");
+export function getPiLabGlobalDir(agentDir = getAgentDir()): string {
+	return join(agentDir, "pi-lab");
 }
 
-export function getPiLabGlobalTmpDir(name?: string, home = homedir()): string {
-	const tmpDir = join(getPiLabGlobalDir(home), "tmp");
+export function getPiLabGlobalTmpDir(name?: string, agentDir?: string): string {
+	const tmpDir = join(getPiLabGlobalDir(agentDir), "tmp");
 	return name ? join(tmpDir, name) : tmpDir;
 }
 

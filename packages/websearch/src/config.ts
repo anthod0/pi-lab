@@ -5,12 +5,12 @@ export interface ReadWebSearchProviderOptions {
   cwd: string;
   projectTrusted: boolean;
   env?: NodeJS.ProcessEnv;
-  home?: string;
+  agentDir?: string;
 }
 
 export function readWebSearchProvider(options: ReadWebSearchProviderOptions): WebSearchProvider {
   const settings = mergePiSettings(
-    readPiUserSettings(options.home),
+    readPiUserSettings(options.agentDir),
     options.projectTrusted ? readPiProjectSettings(options.cwd) : {},
   );
   return resolveWebSearchProvider(options.env ?? process.env, settings);

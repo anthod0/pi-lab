@@ -1,6 +1,5 @@
-import { homedir } from "node:os";
 import { getPiLabGlobalTmpDir } from "@pi-lab/utils";
 
-export function getBinaryTempDir(home = homedir()): string {
-	return getPiLabGlobalTmpDir("webfetch", home);
+export function getBinaryTempDir(agentDir?: string): string {
+	return getPiLabGlobalTmpDir("webfetch", agentDir);
 }
