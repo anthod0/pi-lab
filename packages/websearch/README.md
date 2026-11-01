@@ -36,7 +36,7 @@ Select a provider with an environment variable:
 export WEBSEARCH_PROVIDER=tinyfish # exa, parallel, or tinyfish
 ```
 
-Or configure it in user-level `~/.pi/agent/settings.json` or trusted project-level `.pi/settings.json`:
+Or configure it in user-level `<agentDir>/settings.json` or trusted project-level `.pi/settings.json`. The agent directory defaults to `~/.pi/agent`; setting `PI_CODING_AGENT_DIR` overrides it.
 
 ```json
 {
@@ -52,7 +52,7 @@ When no provider is configured, API keys are detected in this priority order: Pa
 
 When used with `@pi-lab/openai`, this extension reads the `openai` section from the same Pi settings files. Add it alongside any existing settings:
 
-- `~/.pi/agent/settings.json`
+- `<agentDir>/settings.json` (`PI_CODING_AGENT_DIR` when set, otherwise `~/.pi/agent`)
 - `<cwd>/.pi/settings.json` (project fields override global fields)
 
 ```json
