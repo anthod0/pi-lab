@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-11-02
+
+### Fixed
+
+- Respect `PI_CODING_AGENT_DIR` when saving binary downloads.
+
+### Changed
+
+- Local installations no longer require a separate build.
+
+### Known issues
+
+- Some X/Twitter video posts omit direct MP4 links even though their inline scripts contain video URLs. Page content and inline script access remain available.
+
 ## [1.1.5] - 2026-10-21
 
 ### Fixed
@@ -61,7 +75,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` peer dependency ranges to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.5...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.6...HEAD
+[1.1.6]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.5...webfetch@1.1.6
 [1.1.5]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.4...webfetch@1.1.5
 [1.1.4]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.3...webfetch@1.1.4
 [1.1.3]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.2...webfetch@1.1.3

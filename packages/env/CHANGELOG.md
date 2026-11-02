@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-02
+
+### Added
+
+- Reference existing environment variables in settings with `${VAR}`, use literal defaults with `${VAR:-default}`, and escape references with `$${VAR}`. Missing references remain literal and warn without exposing values.
+
+### Fixed
+
+- Respect `PI_CODING_AGENT_DIR` for dotenv files, including the legacy fallback location.
+- Ignore project environment settings when project trust cannot be confirmed.
+
+### Changed
+
+- Local installations no longer require a separate build.
+
 ## [1.0.6] - 2026-10-20
 
 ### Fixed
@@ -28,7 +43,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` peer dependency range to `>=0.80.3 <1`, preventing installation conflicts with pi 0.81 and newer. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/env@1.0.6...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/env@1.1.0...HEAD
+[1.1.0]: https://github.com/anthod0/pi-lab/compare/env@1.0.6...env@1.1.0
 [1.0.6]: https://github.com/anthod0/pi-lab/compare/env@1.0.5...env@1.0.6
 [1.0.5]: https://github.com/anthod0/pi-lab/compare/env@1.0.4...env@1.0.5
 [1.0.4]: https://github.com/anthod0/pi-lab/compare/env@1.0.3...env@1.0.4
