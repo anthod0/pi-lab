@@ -2,6 +2,10 @@
 
 Load env vars for pi from `settings.json` and `~/.pi/agent/.env`.
 
+If `PI_CODING_AGENT_DIR` is set, global `settings.json`, `.env`, and the legacy
+`pi-lab/.env` fallback are read from that directory instead. The examples below
+use the default `~/.pi/agent` directory.
+
 ## Install
 
 ```bash

@@ -13,8 +13,6 @@ export interface LoadGlobalEnvOptions {
   settingsEnv?: SettingsEnv;
 }
 
-const DISPLAY_PATH = "~/.pi/agent/.env";
-
 export function mergeEnv(
   parsed: Record<string, string | undefined>,
   target: NodeJS.ProcessEnv,
@@ -66,7 +64,7 @@ export function loadGlobalEnv(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to load ${DISPLAY_PATH}: ${message}`, {
+    throw new Error(`Failed to load ${filePath}: ${message}`, {
       cause: error,
     });
   }

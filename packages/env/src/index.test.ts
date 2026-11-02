@@ -6,6 +6,7 @@ import { join, parse, sep } from "node:path";
 import test from "node:test";
 
 interface Scenario {
+  paths?: "agentDir" | "envFile";
   dotenv?: string;
   dotenvDirectory?: boolean;
   legacy?: boolean;
@@ -31,7 +32,7 @@ function runScenario(scenario: Scenario = {}) {
   const realHome = realpathSync(homedir());
   const root = mkdtempSync(join(tempDir, "pi-env-startup-"));
   try {
-    const agentDir = join(root, "agent");
+    const agentDir = join(root, "custom agent");
     const cwd = join(root, "project");
     mkdirSync(agentDir, { recursive: true });
     mkdirSync(join(cwd, ".pi"), { recursive: true });
@@ -55,6 +56,12 @@ function runScenario(scenario: Scenario = {}) {
     const env: NodeJS.ProcessEnv = { ...process.env };
     for (const key of keys) delete env[key];
     Object.assign(env, scenario.inherited);
+    env.PI_CODING_AGENT_DIR = scenario.paths ? join(root, "other agent") : agentDir;
+    const paths = scenario.paths === "agentDir"
+      ? { agentDir }
+      : scenario.paths === "envFile"
+        ? { agentDir, envFile: join(agentDir, ".env") }
+        : {};
 
     const child = spawnSync(
       process.execPath,
@@ -66,7 +73,7 @@ function runScenario(scenario: Scenario = {}) {
         `
           const moduleUrl = ${JSON.stringify(new URL("./index.ts", import.meta.url).href)};
           const { default: initialize } = await import(moduleUrl);
-          const paths = ${JSON.stringify({ agentDir, envFile: join(agentDir, ".env") })};
+          const paths = ${JSON.stringify(paths)};
           const snapshot = () => Object.fromEntries(${JSON.stringify(keys)}.map(key => [key, process.env[key] ?? null]));
           const before = snapshot();
           let sessionStart;
@@ -115,16 +122,20 @@ function runScenario(scenario: Scenario = {}) {
   }
 }
 
-for (const legacy of [false, true]) {
-  test(`factory loads ${legacy ? "legacy" : "global"} dotenv during initialization`, () => {
-    const result = runScenario({
-      dotenv: "NEW_VALUE=from-file # inline comment\n",
-      legacy,
+for (const paths of [undefined, "agentDir", "envFile"] as const) {
+  for (const legacy of [false, true]) {
+    test(`factory loads ${legacy ? "legacy" : "global"} dotenv using ${paths ?? "PI_CODING_AGENT_DIR"}`, () => {
+      const result = runScenario({
+        paths,
+        dotenv: "NEW_VALUE=from-file # inline comment\n",
+        legacy,
+      });
+      assert.equal(result.factoryError, null);
+      assert.equal(result.before.NEW_VALUE, null);
+      assert.equal(result.early.NEW_VALUE, "from-file");
+      assert.equal(result.session.NEW_VALUE, "from-file");
     });
-    assert.equal(result.before.NEW_VALUE, null);
-    assert.equal(result.early.NEW_VALUE, "from-file");
-    assert.equal(result.session.NEW_VALUE, "from-file");
-  });
+  }
 }
 
 test("factory loads global settings before dotenv during initialization", () => {
@@ -150,6 +161,22 @@ test("trusted project settings override early globals and dotenv at session_star
   assert.equal(result.session.SHARED, "project");
   assert.equal(result.session.FILE_ONLY, "");
   assert.equal(result.session.PROJECT_ONLY, "project");
+});
+
+test("non-string project env values are ignored without replacing global values", () => {
+  const result = runScenario({
+    globalEnv: { SHARED: "global" },
+    projectContent: JSON.stringify({
+      env: { SHARED: false, NEW_VALUE: 42, FILE_ONLY: null, PROJECT_ONLY: "project" },
+    }),
+  });
+  assert.equal(result.factoryError, null);
+  assert.deepEqual(result.session, {
+    NEW_VALUE: null,
+    SHARED: "global",
+    FILE_ONLY: null,
+    PROJECT_ONLY: "project",
+  });
 });
 
 test("untrusted project settings are never read, including during factory initialization", () => {
@@ -286,7 +313,7 @@ test("dotenv read failures do not partially inject global settings", () => {
     dotenvDirectory: true,
     globalEnv: { SHARED: "global" },
   });
-  assert.match(result.factoryError ?? "", /Failed to load ~\/\.pi\/agent\/\.env/);
+  assert.notEqual(result.factoryError, null);
   assert.equal(result.registered, false);
   assert.deepEqual(result.early, result.before);
 });

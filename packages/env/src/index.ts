@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { readSettingsEnv } from "./config";
+import { getGlobalEnvPath, readSettingsEnv } from "./config";
 import { loadGlobalEnv, mergeEnv } from "./load";
 
 function isProjectTrusted(ctx: unknown): boolean {
@@ -14,8 +14,9 @@ export default function (
 ) {
   // Pi awaits each factory before importing the next extension. Only global
   // configuration is safe to read before a trusted session context exists.
+  const envFile = paths.envFile ?? getGlobalEnvPath(paths.agentDir);
   const globalEnv: NodeJS.ProcessEnv = {};
-  loadGlobalEnv(globalEnv, paths.envFile, {
+  loadGlobalEnv(globalEnv, envFile, {
     settingsEnv: readSettingsEnv(undefined, paths.agentDir, { includeProject: false }),
   });
   const { loadedKeys } = mergeEnv(globalEnv, process.env);
@@ -37,7 +38,7 @@ export default function (
     });
 
     const sessionEnv: NodeJS.ProcessEnv = {};
-    loadGlobalEnv(sessionEnv, paths.envFile, { settingsEnv });
+    loadGlobalEnv(sessionEnv, envFile, { settingsEnv });
 
     // Only update values we still own. A deletion is also a later change, not
     // a missing value to refill. Track session injections for subsequent events.
