@@ -5,7 +5,7 @@ import { loadGlobalEnv, mergeEnv } from "./load";
 
 function isProjectTrusted(ctx: unknown): boolean {
   const maybeTrustedContext = ctx as { isProjectTrusted?: () => boolean };
-  return maybeTrustedContext.isProjectTrusted?.() ?? true;
+  return maybeTrustedContext.isProjectTrusted?.() === true;
 }
 
 export default function (
@@ -14,10 +14,11 @@ export default function (
 ) {
   // Pi awaits each factory before importing the next extension. Only global
   // configuration is safe to read before a trusted session context exists.
+  const sourceEnv = { ...process.env };
   const envFile = paths.envFile ?? getGlobalEnvPath(paths.agentDir);
   const globalEnv: NodeJS.ProcessEnv = {};
   loadGlobalEnv(globalEnv, envFile, {
-    settingsEnv: readSettingsEnv(undefined, paths.agentDir, { includeProject: false }),
+    settingsEnv: readSettingsEnv(undefined, paths.agentDir, { includeProject: false, sourceEnv }),
   });
   const { loadedKeys } = mergeEnv(globalEnv, process.env);
   const injectedValues = new Map(loadedKeys.map((key) => [key, process.env[key]]));
@@ -35,6 +36,7 @@ export default function (
 
     const settingsEnv = readSettingsEnv(ctx.cwd, paths.agentDir, {
       includeProject: isProjectTrusted(ctx),
+      sourceEnv,
     });
 
     const sessionEnv: NodeJS.ProcessEnv = {};

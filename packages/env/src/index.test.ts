@@ -15,6 +15,7 @@ interface Scenario {
   projectEnv?: Record<string, string>;
   projectContent?: string;
   trusted?: boolean;
+  trustUnavailable?: boolean;
   inherited?: Record<string, string>;
   changedAfterLoad?: Record<string, string>;
   deletedAfterLoad?: string[];
@@ -78,12 +79,14 @@ function runScenario(scenario: Scenario = {}) {
           const before = snapshot();
           let sessionStart;
           let factoryError = null;
+          const warnings = [];
+          console.warn = (...args) => warnings.push(args);
           const api = { on: (name, handler) => { if (name === "session_start") sessionStart = handler; } };
           try { initialize(api, paths); } catch (error) { factoryError = error.message; }
           const early = snapshot();
           Object.assign(process.env, ${JSON.stringify(scenario.changedAfterLoad ?? {})});
           for (const key of ${JSON.stringify(scenario.deletedAfterLoad ?? [])}) delete process.env[key];
-          const ctx = { cwd: process.cwd(), isProjectTrusted: () => ${scenario.trusted ?? true} };
+          const ctx = { cwd: process.cwd(), ...(${scenario.trustUnavailable ?? false} ? {} : { isProjectTrusted: () => ${scenario.trusted ?? true} }) };
           if (sessionStart) await sessionStart({}, ctx);
           const session = snapshot();
           Object.assign(process.env, ${JSON.stringify(scenario.changedAfterSession ?? {})});
@@ -96,7 +99,7 @@ function runScenario(scenario: Scenario = {}) {
             reinitialize(api, paths);
             await sessionStart({}, ctx);
           }
-          console.log(JSON.stringify({ before, early, session, repeated, reloaded: snapshot(), factoryError, registered: !!sessionStart }));
+          console.log(JSON.stringify({ before, early, session, repeated, reloaded: snapshot(), factoryError, registered: !!sessionStart, warnings }));
         `,
       ],
       { cwd, env, encoding: "utf8", timeout: 30_000 },
@@ -111,6 +114,7 @@ function runScenario(scenario: Scenario = {}) {
       reloaded: Snapshot;
       factoryError: string | null;
       registered: boolean;
+      warnings: Array<[string, { path: string; key: string; variable: string }]>;
     };
   } finally {
     // Only remove the exact mkdtemp result, never a home or an ancestor of it.
@@ -316,6 +320,109 @@ test("dotenv read failures do not partially inject global settings", () => {
   assert.notEqual(result.factoryError, null);
   assert.equal(result.registered, false);
   assert.deepEqual(result.early, result.before);
+});
+
+test("settings interpolate inherited values while retaining shell and project precedence", () => {
+  const result = runScenario({
+    inherited: { SHARED: "shell-value", FILE_ONLY: "" },
+    globalEnv: {
+      NEW_VALUE: "https://${SHARED}/${FILE_ONLY:-fallback}",
+      SHARED: "${NEW_VALUE:-settings-value}",
+    },
+    projectEnv: { NEW_VALUE: "project:${SHARED}", PROJECT_ONLY: "${FILE_ONLY}" },
+  });
+  assert.equal(result.early.NEW_VALUE, "https://shell-value/fallback");
+  assert.equal(result.early.SHARED, "shell-value");
+  assert.equal(result.session.NEW_VALUE, "project:shell-value");
+  assert.equal(result.session.PROJECT_ONLY, "");
+  assert.equal(result.session.SHARED, "shell-value");
+  assert.deepEqual(result.warnings, []);
+});
+
+test("session interpolation uses the initial environment despite subsequent changes and deletions", () => {
+  const result = runScenario({
+    inherited: { SHARED: "initial" },
+    globalEnv: { NEW_VALUE: "global:${SHARED}" },
+    projectEnv: { PROJECT_ONLY: "project:${SHARED}" },
+    changedAfterLoad: { SHARED: "later" },
+    deletedAfterSession: ["SHARED"],
+    repeat: true,
+  });
+  assert.equal(result.early.NEW_VALUE, "global:initial");
+  assert.equal(result.session.PROJECT_ONLY, "project:initial");
+  assert.equal(result.repeated.PROJECT_ONLY, "project:initial");
+  assert.equal(result.repeated.NEW_VALUE, "global:initial");
+  assert.equal(result.repeated.SHARED, null);
+  assert.deepEqual(result.warnings, []);
+});
+
+test("settings cannot reference values injected from settings or dotenv", () => {
+  const result = runScenario({
+    globalEnv: { SHARED: "global", NEW_VALUE: "${SHARED}" },
+    dotenv: "FILE_ONLY=from-file\n",
+    projectEnv: { PROJECT_ONLY: "${SHARED}/${NEW_VALUE}/${FILE_ONLY}" },
+    repeat: true,
+  });
+  assert.equal(result.early.NEW_VALUE, "${SHARED}");
+  assert.equal(result.session.PROJECT_ONLY, "${SHARED}/${NEW_VALUE}/${FILE_ONLY}");
+  assert.deepEqual(result.repeated, result.session);
+  assert.deepEqual(new Set(result.warnings.map(([, warning]) => warning.variable)),
+    new Set(["SHARED", "NEW_VALUE", "FILE_ONLY"]));
+});
+
+test("missing-variable warnings identify the setting without exposing source or result values", () => {
+  const result = runScenario({
+    inherited: { SHARED: "source-secret", NEW_VALUE: "shell-wins" },
+    globalEnv: { NEW_VALUE: "literal-secret/${SHARED}/${FILE_ONLY}" },
+    projectEnv: { PROJECT_ONLY: "project-secret/${FILE_ONLY}" },
+  });
+  assert.equal(result.session.NEW_VALUE, "shell-wins");
+  assert.equal(result.session.PROJECT_ONLY, "project-secret/${FILE_ONLY}");
+  const warnings = result.warnings.map(([, warning]) => warning);
+  assert.ok(warnings.some(({ path, key, variable }) =>
+    path.endsWith(join("custom agent", "settings.json")) && key === "NEW_VALUE" && variable === "FILE_ONLY"));
+  assert.ok(warnings.some(({ path, key, variable }) =>
+    path.endsWith(join("project", ".pi", "settings.json")) && key === "PROJECT_ONLY" && variable === "FILE_ONLY"));
+  const diagnostics = JSON.stringify(result.warnings);
+  for (const secret of ["source-secret", "literal-secret", "project-secret", "shell-wins"]) {
+    assert.equal(diagnostics.includes(secret), false);
+  }
+});
+
+for (const trustUnavailable of [false, true]) {
+  test(`project interpolation is skipped when trust is ${trustUnavailable ? "unavailable" : "denied"}`, () => {
+    const result = runScenario({
+      inherited: { SHARED: "source" },
+      globalEnv: { NEW_VALUE: "${SHARED}" },
+      projectEnv: { PROJECT_ONLY: "${SHARED}/${FILE_ONLY}" },
+      trusted: false,
+      trustUnavailable,
+    });
+    assert.equal(result.session.NEW_VALUE, "source");
+    assert.equal(result.session.PROJECT_ONLY, null);
+    assert.deepEqual(result.warnings, []);
+  });
+}
+
+test("project settings are not read when the trust API is unavailable", () => {
+  const result = runScenario({ projectContent: "not valid JSON", trustUnavailable: true });
+  assert.equal(result.factoryError, null);
+  assert.equal(result.registered, true);
+  assert.equal(result.session.PROJECT_ONLY, null);
+});
+
+test("escaped and command-like settings values bypass dotenv evaluation", () => {
+  const payload = "$(printf injected) `printf injected` ${FILE_ONLY}";
+  const result = runScenario({
+    inherited: { SHARED: payload },
+    globalEnv: { NEW_VALUE: "${SHARED}", FILE_ONLY: "$${SHARED}" },
+    projectEnv: { PROJECT_ONLY: "${SHARED}" },
+    repeat: true,
+  });
+  assert.equal(result.early.NEW_VALUE, payload);
+  assert.equal(result.session.PROJECT_ONLY, payload);
+  assert.equal(result.repeated.FILE_ONLY, "${SHARED}");
+  assert.deepEqual(result.warnings, []);
 });
 
 test("missing dotenv and env settings do not inject values", () => {

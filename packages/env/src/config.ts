@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { readPiProjectSettings, readPiUserSettings, type PiSettings } from "@pi-lab/utils";
 
+import { interpolateEnv } from "./interpolate";
+
 export interface GlobalEnvFile {
   exists: boolean;
   path: string;
@@ -20,7 +22,11 @@ export function getLegacyGlobalEnvPath(agentDir = getAgentDir()): string {
   return join(agentDir, "pi-lab", ".env");
 }
 
-function extractSettingsEnv(settings: PiSettings): SettingsEnv {
+function extractSettingsEnv(
+  settings: PiSettings,
+  source: Readonly<NodeJS.ProcessEnv>,
+  filePath: string,
+): SettingsEnv {
   if (
     typeof settings.env !== "object" ||
     settings.env === null ||
@@ -31,7 +37,12 @@ function extractSettingsEnv(settings: PiSettings): SettingsEnv {
 
   const env: SettingsEnv = {};
   for (const [key, value] of Object.entries(settings.env)) {
-    if (typeof value === "string") env[key] = value;
+    if (typeof value !== "string") continue;
+    const result = interpolateEnv(value, source);
+    env[key] = result.value;
+    for (const variable of result.missingVariables) {
+      console.warn("[env] Undefined environment variable", { path: filePath, key, variable });
+    }
   }
   return env;
 }
@@ -39,13 +50,14 @@ function extractSettingsEnv(settings: PiSettings): SettingsEnv {
 export function readSettingsEnv(
   cwd = process.cwd(),
   agentDir = getAgentDir(),
-  options: { includeProject?: boolean } = {},
+  options: { includeProject?: boolean; sourceEnv?: Readonly<NodeJS.ProcessEnv> } = {},
 ): SettingsEnv {
+  const source = options.sourceEnv ?? process.env;
   return {
-    ...extractSettingsEnv(readPiUserSettings(agentDir)),
+    ...extractSettingsEnv(readPiUserSettings(agentDir), source, join(agentDir, "settings.json")),
     ...(options.includeProject === false
       ? {}
-      : extractSettingsEnv(readPiProjectSettings(cwd))),
+      : extractSettingsEnv(readPiProjectSettings(cwd), source, join(cwd, ".pi", "settings.json"))),
   };
 }
 

@@ -29,6 +29,7 @@ Configure env vars in global settings:
 ```
 
 Trusted projects can also override/add env vars in `.pi/settings.json` with the same `env` shape.
+Project settings are ignored when Pi cannot confirm that the project is trusted.
 
 You can still use a dotenv file:
 
@@ -44,6 +45,42 @@ INTERNAL_TOKEN=...
 ```
 
 Restart `pi` after editing settings or dotenv files.
+
+## Reference existing environment variables
+
+String values in the `settings.json` `env` block can reference variables already
+present when this extension loads:
+
+```json
+{
+  "env": {
+    "EXA_API_KEY": "${EXA_KEY_PROD}",
+    "ANTHROPIC_BASE_URL": "https://${GATEWAY_HOST}/anthropic",
+    "HTTP_PROXY": "http://${PROXY_HOST:-127.0.0.1}:7890",
+    "LITERAL": "$${EXA_KEY_PROD}"
+  }
+}
+```
+
+- `${VAR}` substitutes the existing value, including an empty string.
+- `${VAR:-default}` uses the literal default when the variable is missing or empty.
+- `$${VAR}` produces the literal text `${VAR}` without substitution.
+- A missing variable without a default stays as `${VAR}` and produces a warning.
+  Warnings identify the settings file and variable names, not their values.
+
+Variable names must match `[A-Za-z_][A-Za-z0-9_]*`. Multiple references in a
+string are supported. Nested expressions, including references inside defaults,
+are not supported and remain literal.
+
+Global and trusted project settings use the same values captured when the
+extension loads. Later environment changes do not affect substitutions. Entries
+in the same settings block, global settings, and dotenv files loaded by this
+extension are not reference sources during that load.
+
+Substitution is text-only: inserted values are not expanded again, and settings
+values never execute commands. `$VAR`, shell expressions, and file-reading
+expressions are not evaluated. These rules apply only to settings values;
+dotenv parsing is unchanged.
 
 ## Startup timing
 
