@@ -18,29 +18,32 @@
   },
   "type": "module",
   "files": [
-    "dist",
+    "src",
+    "!src/**/*.test.ts",
     "README.md"
   ],
   "pi": {
     "extensions": [
-      "./dist/index.mjs"
+      "./src/index.ts"
     ]
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
-    "@pi-lab/utils": "workspace:*",
     "@types/node": "catalog:",
-    "tsdown": "catalog:",
     "tsx": "catalog:"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:peer"
   },
   "dependencies": {
-    "@dotenvx/dotenvx": "catalog:"
-  }
+    "@dotenvx/dotenvx": "catalog:",
+    "@pi-lab/utils": "workspace:*"
+  },
+  "bundledDependencies": [
+    "@pi-lab/utils"
+  ]
 }

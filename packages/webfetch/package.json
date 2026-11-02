@@ -17,25 +17,24 @@
   },
   "type": "module",
   "files": [
-    "dist",
+    "src",
+    "!src/**/*.test.ts",
     "README.md"
   ],
   "pi": {
     "extensions": [
-      "./dist/index.mjs"
+      "./src/index.ts"
     ]
   },
   "scripts": {
-    "build": "tsdown"
+    "build": "tsc --noEmit"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
     "@earendil-works/pi-tui": "catalog:",
-    "@pi-lab/utils": "workspace:*",
     "@types/mozilla__readability": "catalog:",
     "@types/node": "catalog:",
     "@types/turndown": "catalog:",
-    "tsdown": "catalog:",
     "typebox": "catalog:"
   },
   "peerDependencies": {
@@ -45,9 +44,13 @@
   },
   "dependencies": {
     "@mozilla/readability": "catalog:",
+    "@pi-lab/utils": "workspace:*",
     "fflate": "catalog:",
     "linkedom": "catalog:",
     "lru-cache": "catalog:",
     "turndown": "catalog:"
-  }
+  },
+  "bundledDependencies": [
+    "@pi-lab/utils"
+  ]
 }
