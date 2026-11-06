@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-11-06
+
+### Fixed
+
+- Allow OpenAI image generation settings and other unrelated OpenAI options without reporting a native-search configuration error.
+
 ## [1.3.3] - 2026-11-01
 
 ### Fixed
@@ -65,7 +71,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` peer dependency ranges to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.3...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.4...HEAD
+[1.3.4]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.3...websearch@1.3.4
 [1.3.3]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.2...websearch@1.3.3
 [1.3.2]: https://github.com/anthod0/pi-lab/compare/websearch@1.3.0...websearch@1.3.2
 [1.3.0]: https://github.com/anthod0/pi-lab/compare/websearch@1.2.2...websearch@1.3.0

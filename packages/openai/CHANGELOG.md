@@ -2,11 +2,13 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-06
+
 ### Added
 
 - Image generation and editing through Codex OAuth or the OpenAI Images API, available with any chat model.
-- Backend and model-specific tool parameters, including supported batch, format, size and editing options.
-- Exclusive output files, actual raster dimensions, cancellation and explicit backend selection without automatic retries.
+- Batch generation, output formats, sizes and editing options supported by the selected backend and model.
+- Save images to new files without overwriting existing files, report actual raster dimensions, and support cancellation.
 
 ### Changed
 
