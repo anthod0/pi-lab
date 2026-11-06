@@ -6,8 +6,7 @@ A collection of [pi coding agent](https://github.com/earendil-works/pi) extensio
 
 | Package                                           | Description                                                             | Version                                                                                                                   |
 | ------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| [@pi-lab/openai](./packages/openai)               | OpenAI ChatGPT Fast controls and native Web Search                     | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/openai)](https://www.npmjs.com/package/@pi-lab/openai) |
-| [@pi-lab/codex-image](./packages/codex-image)       | Generate and edit images using local Codex CLI                          | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/codex-image)](https://www.npmjs.com/package/@pi-lab/codex-image) |
+| [@pi-lab/openai](./packages/openai)               | Image generation, ChatGPT Fast controls and native Web Search          | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/openai)](https://www.npmjs.com/package/@pi-lab/openai) |
 | [@pi-lab/permissions](./packages/permissions)     | Permission system — enforce allow / deny / ask rules on tool calls      | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/permissions)](https://www.npmjs.com/package/@pi-lab/permissions)     |
 | [@pi-lab/webfetch](./packages/webfetch)           | Fetch URLs as clean Markdown with X/Twitter and Reddit optimizations     | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/webfetch)](https://www.npmjs.com/package/@pi-lab/webfetch)           |
 | [@pi-lab/websearch](./packages/websearch)         | Search the web with Exa, Parallel, or TinyFish                          | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/websearch)](https://www.npmjs.com/package/@pi-lab/websearch)         |
@@ -23,6 +22,7 @@ These packages are no longer maintained and are retained for reference. No furth
 
 | Package | Reason | Version |
 | ------- | -------------------- | ------- |
+| [@pi-lab/codex-image](./packages/codex-image) | Deprecated in favor of @pi-lab/openai. | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/codex-image)](https://www.npmjs.com/package/@pi-lab/codex-image) |
 | [@pi-lab/grok-build](./packages/grok-build) |  Just using the Grok CLI directly. | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/grok-build)](https://www.npmjs.com/package/@pi-lab/grok-build) |
 | [@pi-lab/xsearch](./packages/xsearch) | Parallel and TinyFish can find some X posts; for more time-sensitive searches, use Grok directly. | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/xsearch)](https://www.npmjs.com/package/@pi-lab/xsearch) |
 

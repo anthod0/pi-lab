@@ -21,11 +21,13 @@ function setup(t: TestContext, config?: unknown) {
 	if (config !== undefined) writeConfig(config);
 	const handlers = new Map<string, Handler>();
 	const commands = new Map<string, Handler>();
+	const tools = new Map<string, any>();
 	const statuses = new Map<string, string>();
 	const notices: Array<{ message: string; level: string }> = [];
 	let branch: any[] = [];
 	let oauth = true;
 	const ctx = {
+		isProjectTrusted: () => true,
 		cwd, hasUI: true,
 		model: { provider: "openai", api: "openai-responses", id: "test-model", baseUrl: "https://api.openai.com/v1" },
 		modelRegistry: { isUsingOAuth: () => oauth },
@@ -42,11 +44,12 @@ function setup(t: TestContext, config?: unknown) {
 	openai({
 		on(name: string, handler: Handler) { handlers.set(name, handler); },
 		registerCommand(name: string, command: { handler: Handler }) { commands.set(name, command.handler); },
+		registerTool(tool: any) { tools.set(tool.name, tool); },
 		appendEntry(customType: string, data: unknown) { branch.push({ type: "custom", customType, data }); },
 	} as any, { agentDir });
 	const emit = async (name: string, data: object = {}) => handlers.get(name)?.({ type: name, ...data }, ctx);
 	return {
-		ctx, notices, statuses, configPath, writeConfig, emit,
+		ctx, notices, statuses, tools, configPath, writeConfig, emit,
 		get branch() { return branch; },
 		setBranch(value: any[]) { branch = value; },
 		setOAuth(value: boolean) { oauth = value; },
@@ -217,4 +220,29 @@ test("idle cache warming uses the same feature configuration as active requests"
 	const active = await app.payload();
 	await app.emit("turn_end");
 	assert.deepEqual(await app.payload(), active);
+});
+
+test("image tools follow configured backend/model on reload, independently of the chat provider", async (t) => {
+	const app = setup(t, { openai: { imageGeneration: { backend: "codex" } } });
+	app.ctx.model.provider = "anthropic";
+	await app.start();
+	assert.deepEqual(Object.keys(app.tools.get("generate_image").parameters.properties).sort(), ["images", "output", "prompt"]);
+	app.writeConfig({ openai: { imageGeneration: { backend: "openai", model: "gpt-image-2.6-flare" } } });
+	await app.emit("model_select");
+	assert.equal(app.tools.get("generate_image").parameters.properties.quality, undefined);
+	await app.start();
+	assert.ok(app.tools.get("generate_image").parameters.properties.frame_count);
+	app.writeConfig({ openai: { imageGeneration: false } });
+	await app.start();
+	assert.equal(app.tools.get("generate_image").exposure, "hidden");
+	await assert.rejects(app.tools.get("generate_image").execute());
+});
+
+test("invalid image config withdraws an already registered tool", async (t) => {
+	const app = setup(t, { openai: { imageGeneration: { backend: "codex" } } });
+	await app.start();
+	app.writeConfig({ openai: { imageGeneration: { backend: "invalid" } } });
+	await assert.rejects(app.start());
+	assert.equal(app.tools.get("generate_image").exposure, "hidden");
+	await assert.rejects(app.tools.get("generate_image").execute());
 });

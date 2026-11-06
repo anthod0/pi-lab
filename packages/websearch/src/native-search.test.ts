@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test, { type TestContext } from "node:test";
 
-import { loadConfig as loadOpenAIConfig } from "../../openai/src/config";
 import { loadConfig as loadWebsearchConfig } from "./native-search.js";
 
 function configFiles(t: TestContext) {
@@ -25,62 +24,61 @@ function configFiles(t: TestContext) {
   };
 }
 
-// Both independent implementations must satisfy the same outcomes. Neither is
-// used as the other's expected result, so a common regression still fails.
-const loaders = [loadOpenAIConfig, loadWebsearchConfig];
-
-test("both extensions read native search settings from PI_CODING_AGENT_DIR without injection", (t) => {
+test("reads native search settings from PI_CODING_AGENT_DIR without injection", (t) => {
   const files = configFiles(t);
   files.write("global", JSON.stringify({ openai: { fast: true, webSearch: true } }));
   const result = execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `
-    import { loadConfig as openai } from ${JSON.stringify(new URL("../../openai/src/config.ts", import.meta.url).href)};
     import { loadConfig as websearch } from ${JSON.stringify(new URL("./native-search.ts", import.meta.url).href)};
-    console.log(JSON.stringify([openai, websearch].map(load => load(${JSON.stringify(files.cwd)}))));
+    console.log(JSON.stringify(websearch(${JSON.stringify(files.cwd)})));
   `], { env: { ...process.env, PI_CODING_AGENT_DIR: files.agentDir }, encoding: "utf8" });
-  assert.deepEqual(JSON.parse(result), [
-    { fast: true, webSearch: true },
-    { fast: true, webSearch: true },
-  ]);
+  assert.deepEqual(JSON.parse(result), { webSearch: true });
 });
 
-test("both extensions default to disabling native search without configuration", (t) => {
+test("defaults to disabling native search without configuration", (t) => {
   const files = configFiles(t);
-  for (const load of loaders) assert.deepEqual(load(files.cwd, files.agentDir), { fast: false, webSearch: false });
+  assert.deepEqual(loadWebsearchConfig(files.cwd, files.agentDir), { webSearch: false });
 });
 
 for (const [project, expected] of [
-  [{}, { fast: true, webSearch: true }],
-  [{ openai: {} }, { fast: true, webSearch: true }],
-  [{ openai: { webSearch: false } }, { fast: true, webSearch: false }],
-  [{ openai: { fast: false } }, { fast: false, webSearch: true }],
+  [{}, { webSearch: true }],
+  [{ openai: {} }, { webSearch: true }],
+  [{ openai: { webSearch: false } }, { webSearch: false }],
+  [{ openai: { fast: false } }, { webSearch: true }],
 ] as const) {
-  test(`both extensions merge per-field overrides: ${JSON.stringify(project)}`, (t) => {
+  test(`project webSearch overrides the global value: ${JSON.stringify(project)}`, (t) => {
     const files = configFiles(t);
     files.write("global", JSON.stringify({ openai: { fast: true, webSearch: true } }));
     files.write("project", JSON.stringify(project));
-    for (const load of loaders) assert.deepEqual(load(files.cwd, files.agentDir), expected);
+    assert.deepEqual(loadWebsearchConfig(files.cwd, files.agentDir), expected);
   });
 }
 
 for (const invalid of ["{", "null", "[]", '{"openai":null}', '{"openai":[]}',
-  '{"openai":{"webSearch":1}}', '{"openai":{"fast":"true"}}', '{"openai":{"webSerch":true}}']) {
-  test(`both extensions reject invalid config: ${invalid}`, (t) => {
+  '{"openai":{"webSearch":1}}', '{"openai":{"webSearch":"true"}}']) {
+  test(`rejects invalid settings structure or webSearch: ${invalid}`, (t) => {
     const files = configFiles(t);
     files.write("project", invalid);
-    for (const load of loaders) assert.throws(() => load(files.cwd, files.agentDir), /Invalid OpenAI config/);
+    assert.throws(() => loadWebsearchConfig(files.cwd, files.agentDir));
   });
 }
 
-test("both extensions read OpenAI settings alongside unrelated Pi and extension settings", (t) => {
+test("reads webSearch alongside unrelated Pi and extension settings", (t) => {
   const files = configFiles(t);
   files.write("global", JSON.stringify({ theme: "dark", openai: { fast: true } }));
   files.write("project", JSON.stringify({ websearch: { provider: "exa" }, openai: { webSearch: true } }));
-  for (const load of loaders) assert.deepEqual(load(files.cwd, files.agentDir), { fast: true, webSearch: true });
+  assert.deepEqual(loadWebsearchConfig(files.cwd, files.agentDir), { webSearch: true });
 });
 
-test("neither extension masks invalid global config with a valid project override", (t) => {
+test("a valid project override does not hide an invalid global webSearch value", (t) => {
   const files = configFiles(t);
-  files.write("global", '{"openai":{"fast":"true"}}');
+  files.write("global", '{"openai":{"webSearch":"true"}}');
   files.write("project", '{"openai":{"fast":false,"webSearch":true}}');
-  for (const load of loaders) assert.throws(() => load(files.cwd, files.agentDir), /Invalid OpenAI config/);
+  assert.throws(() => loadWebsearchConfig(files.cwd, files.agentDir));
+});
+
+test("ignores unknown fields and settings owned by other features in both scopes", (t) => {
+  const files = configFiles(t);
+  files.write("global", JSON.stringify({ openai: { webSearch: true, fast: "invalid", futureOption: [1, 2] } }));
+  files.write("project", JSON.stringify({ openai: { imageGeneration: null, webSerch: false, anotherOption: {} } }));
+  assert.deepEqual(loadWebsearchConfig(files.cwd, files.agentDir), { webSearch: true });
 });

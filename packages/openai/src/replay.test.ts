@@ -42,6 +42,7 @@ function setup(t: TestContext) {
 	const handlers = new Map<string, (event: any, ctx: any) => any>();
 	let branch: any[] = [];
 	const ctx = {
+		isProjectTrusted: () => true,
 		cwd, hasUI: false, model: { ...model }, modelRegistry: { isUsingOAuth: () => true },
 		sessionManager: { getBranch: () => branch },
 	};

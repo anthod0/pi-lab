@@ -1,5 +1,7 @@
 # @pi-lab/codex-image
 
+> **Deprecated:** Use [@pi-lab/openai](../openai) for image generation with Codex or the OpenAI API. This package remains available but is no longer maintained. Disable it before enabling the replacement, since both register `generate_image`.
+
 Generate and edit images in [Pi](https://pi.dev) through Codex CLI, using your existing Codex login. Saves a PNG file and returns its path—no separate image API key required.
 
 ## Install

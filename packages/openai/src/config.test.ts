@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test, { type TestContext } from "node:test";
 
-import { loadConfig } from "./config";
+import { loadConfig, loadImageConfig } from "./config";
 
 function sandbox(t: TestContext) {
 	const directory = mkdtempDisposableSync(join(tmpdir(), "pi-openai-config-"));
@@ -58,3 +58,31 @@ test("a valid local override does not hide an invalid global config", (t) => {
 	app.write("local", { openai: { fast: false } });
 	assert.throws(() => loadConfig(app.cwd, app.agentDir));
 });
+
+test("image backend configuration replaces the global selection and can be disabled locally", (t) => {
+	const app = sandbox(t);
+	app.write("global", { openai: { webSearch: true, imageGeneration: { backend: "openai", model: "gpt-image-2.6-flare" } } });
+	app.write("local", { openai: { imageGeneration: { backend: "codex" } } });
+	assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: true });
+	assert.deepEqual(loadImageConfig(app.cwd, app.agentDir), { backend: "codex" });
+	app.write("local", { openai: { imageGeneration: false } });
+	assert.equal(loadImageConfig(app.cwd, app.agentDir), false);
+});
+
+test("untrusted project image configuration cannot select a billing backend", (t) => {
+	const app = sandbox(t);
+	app.write("global", { openai: { imageGeneration: { backend: "codex" } } });
+	app.write("local", { openai: { imageGeneration: { backend: "openai", model: "gpt-image-2" } } });
+	assert.deepEqual(loadImageConfig(app.cwd, app.agentDir, false), { backend: "codex" });
+});
+
+for (const imageGeneration of [true, null, {}, { backend: "unknown" }, { backend: "codex", model: "gpt-image-2" },
+	{ backend: "openai" }, { backend: "openai", model: "unknown" }, { backend: "openai", model: "toString" },
+	{ backend: "openai", model: "gpt-image-2", apiKey: "key" }]) {
+	test(`invalid image config fails explicitly: ${JSON.stringify(imageGeneration)}`, (t) => {
+		const app = sandbox(t);
+		app.write("global", { openai: { imageGeneration } });
+		assert.throws(() => loadImageConfig(app.cwd, app.agentDir));
+		assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: false });
+	});
+}

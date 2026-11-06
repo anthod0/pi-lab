@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- Image generation and editing through Codex OAuth or the OpenAI Images API, available with any chat model.
+- Backend and model-specific tool parameters, including supported batch, format, size and editing options.
+- Exclusive output files, actual raster dimensions, cancellation and explicit backend selection without automatic retries.
+
+### Changed
+
+- Image generation is available as a replacement for the deprecated `@pi-lab/codex-image` CLI integration. Configure `openai.imageGeneration` and remove the old extension before reloading.
+
 ## [0.1.2] - 2026-10-25
 
 ### Changed

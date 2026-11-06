@@ -1,7 +1,7 @@
 {
   "name": "@pi-lab/openai",
   "version": "0.1.2",
-  "description": "OpenAI ChatGPT Fast mode and native web search for pi",
+  "description": "Image generation, ChatGPT Fast controls and native web search for pi",
   "scripts": {
     "test": "tsx --test src/**/*.test.ts",
     "build": "tsc --noEmit"
@@ -32,11 +32,15 @@
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "catalog:",
+    "@earendil-works/pi-tui": "catalog:",
     "@types/node": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "typebox": "catalog:"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "catalog:peer"
+    "@earendil-works/pi-coding-agent": "catalog:peer",
+    "@earendil-works/pi-tui": "catalog:peer",
+    "typebox": "catalog:peer"
   },
   "dependencies": {
     "@pi-lab/utils": "workspace:*"

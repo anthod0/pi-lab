@@ -111,6 +111,24 @@ function assertSearchChoice(payload: any, expected: "native" | "standalone") {
 }
 
 for (const order of ["openai-first", "websearch-first"] as const) {
+  for (const scope of ["global", "project"] as const) {
+    test(`invalid ${scope} image model preserves Fast and native search: ${order}`, async (t) => {
+      const app = setup(t, order);
+      app.ctx.isProjectTrusted = () => true;
+      app.writeConfig({ openai: {
+        fast: true, webSearch: true, imageGeneration: { backend: "openai", model: "unknown-image-model" },
+      } }, scope);
+      await app.start();
+      assert.equal(app.errors.length, 1);
+      assert.equal(app.active.has("generate_image"), false);
+      const payload = await app.request();
+      assertSearchChoice(payload, "native");
+      assert.equal(payload.service_tier, "priority");
+    });
+  }
+}
+
+for (const order of ["openai-first", "websearch-first"] as const) {
   test(`native search excludes standalone search regardless of load order: ${order}`, async (t) => {
     const app = setup(t, order, { openai: { webSearch: true } });
     await app.start();
@@ -200,11 +218,11 @@ test("both extensions merge global and project settings identically", async (t) 
   assertSearchChoice(await app.request(), "standalone");
 });
 
-test("invalid OpenAI config reports errors but keeps standalone search available", async (t) => {
+test("invalid native search setting reports errors but keeps standalone search available", async (t) => {
   const app = setup(t, "websearch-first", { openai: { webSearch: true } });
   await app.start();
   assertSearchChoice(await app.request(), "native");
-  app.writeConfig({ openai: { webSearch: true, fast: "yes" } });
+  app.writeConfig({ openai: { webSearch: "yes" } });
   await app.reload();
   assertSearchChoice(await app.request(), "standalone");
   assert.ok(app.errors.length > 0);

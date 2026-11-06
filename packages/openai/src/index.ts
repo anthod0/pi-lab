@@ -1,6 +1,8 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { includeNativeSearch } from "./compaction";
+import { loadImageConfig } from "./config";
+import { imageToolRegistration } from "./images/tool";
 import { isNativeWebSearchEnabled, isOpenAIChatGPTModel, loadConfig, type OpenAIConfig } from "./policy";
 import { readReplayRecord, ResponseOutput, restoreInput } from "./replay";
 
@@ -21,6 +23,7 @@ type RequestState = {
 };
 
 export default function openai(pi: ExtensionAPI, options: { agentDir?: string } = {}): void {
+	const registerImageTool = imageToolRegistration(pi);
 	let config: OpenAIConfig | undefined;
 	let fast = false;
 	let request: RequestState | undefined;
@@ -58,12 +61,14 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 		fast = false;
 		lastTier = undefined;
 		clearRequest();
+		registerImageTool(false);
 		try {
 			config = loadConfig(ctx.cwd, options.agentDir);
+			restoreFast(ctx);
+			registerImageTool(loadImageConfig(ctx.cwd, options.agentDir, ctx.isProjectTrusted()));
 		} finally {
 			updateStatus(ctx);
 		}
-		restoreFast(ctx);
 	});
 
 	pi.on("session_before_compact", (event) => includeNativeSearch(event));
