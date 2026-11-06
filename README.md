@@ -11,7 +11,6 @@ A collection of [pi coding agent](https://github.com/earendil-works/pi) extensio
 | [@pi-lab/webfetch](./packages/webfetch)           | Fetch URLs as clean Markdown with X/Twitter and Reddit optimizations     | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/webfetch)](https://www.npmjs.com/package/@pi-lab/webfetch)           |
 | [@pi-lab/websearch](./packages/websearch)         | Search the web with Exa, Parallel, or TinyFish                          | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/websearch)](https://www.npmjs.com/package/@pi-lab/websearch)         |
 | [@pi-lab/env](./packages/env)                     | Load `.env` into pi sessions                                            | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/env)](https://www.npmjs.com/package/@pi-lab/env)                     |
-| [@pi-lab/ssm-env](./packages/ssm-env)             | Load environment variables from AWS SSM Parameter Store                 | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/ssm-env)](https://www.npmjs.com/package/@pi-lab/ssm-env)             |
 | [@pi-lab/input-history](./packages/input-history) | `↑` recalls inputs across all sessions in the same project              | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/input-history)](https://www.npmjs.com/package/@pi-lab/input-history) |
 | [@pi-lab/notify](./packages/notify)               | Desktop notifications                                                   | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/notify)](https://www.npmjs.com/package/@pi-lab/notify)               |
 | [@pi-lab/subagent](./packages/subagent)           | A minimal synchronous subagent                                           | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/subagent)](https://www.npmjs.com/package/@pi-lab/subagent)           |
@@ -22,6 +21,7 @@ These packages are no longer maintained and are retained for reference. No furth
 
 | Package | Reason | Version |
 | ------- | -------------------- | ------- |
+| [@pi-lab/ssm-env](./packages/ssm-env) | No longer maintained. | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/ssm-env)](https://www.npmjs.com/package/@pi-lab/ssm-env) |
 | [@pi-lab/codex-image](./packages/codex-image) | Deprecated in favor of @pi-lab/openai. | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/codex-image)](https://www.npmjs.com/package/@pi-lab/codex-image) |
 | [@pi-lab/grok-build](./packages/grok-build) |  Just using the Grok CLI directly. | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/grok-build)](https://www.npmjs.com/package/@pi-lab/grok-build) |
 | [@pi-lab/xsearch](./packages/xsearch) | Parallel and TinyFish can find some X posts; for more time-sensitive searches, use Grok directly. | [![NPM Version](https://img.shields.io/npm/v/@pi-lab/xsearch)](https://www.npmjs.com/package/@pi-lab/xsearch) |

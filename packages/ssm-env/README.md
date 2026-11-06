@@ -1,5 +1,7 @@
 # @pi-lab/ssm-env [![NPM Version](https://img.shields.io/npm/v/@pi-lab/ssm-env)](https://www.npmjs.com/package/@pi-lab/ssm-env)
 
+> **Archived:** This package is no longer maintained. No further updates or fixes are planned.
+
 Load environment variables from AWS Systems Manager Parameter Store into pi.
 
 ## Install
