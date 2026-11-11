@@ -24,7 +24,7 @@ test("loadWebFetchConfig reads simple settings boolean", () => {
 });
 
 function streamScript(payload: string, kind = "Result.Ok"): string {
-	return `($R=>$R[30].next($R[33]={kind:"GraphQLRequestStream.Completed",requestId:1,key:"query",result:$R[34]={kind:${JSON.stringify(kind)},value:${JSON.stringify(payload)}}}))($R["tsr"]);document.currentScript.remove();`;
+	return `($R=>$R[30].next($R[33]={kind:1,requestId:1,key:"query",result:$R[34]={kind:${JSON.stringify(kind)},value:${JSON.stringify(payload)}}}))($R["tsr"]);document.currentScript.remove();`;
 }
 
 function streamHtml(scripts: string[], body = "<main>Post</main>"): string {
@@ -122,8 +122,7 @@ test("x optimizer ignores unsuccessful or incomplete stream events", async (t) =
 	for (const [name, script] of [
 		["failed result", streamScript(tweetPayload(videoTweet()), "Result.Error")],
 		["payload expression", streamScript(tweetPayload(videoTweet())).replace("}}))", '+"junk"}}))')],
-		["incomplete request", streamScript(tweetPayload(videoTweet())).replace("GraphQLRequestStream.Completed", "GraphQLRequestStream.Started")],
-		["unterminated envelope", streamScript(tweetPayload(videoTweet())).split("}))")[0]],
+		["unterminated result", streamScript(tweetPayload(videoTweet())).split("}}))")[0]],
 	] as const) {
 		await t.test(name, async () => {
 			const html = streamHtml([script]);

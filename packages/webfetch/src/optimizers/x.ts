@@ -214,7 +214,9 @@ function propertyString(source: string, range: ObjectRange, name: string): strin
 	return property?.type === "string" ? property.value : undefined;
 }
 
-function findStreamEvents(source: string): ObjectRange[] {
+// Stream events changed their own `kind` encoding over time; the successful
+// result object nested in each response event is the stable anchor.
+function findOkResults(source: string): ObjectRange[] {
 	const ranges: ObjectRange[] = [];
 	const delimiters: Array<{ char: string; start: number }> = [];
 	const pairs: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
@@ -224,7 +226,7 @@ function findStreamEvents(source: string): ObjectRange[] {
 		if (char === '"' || char === "'" || char === "`") {
 			const token = readJsString(source, i);
 			if (!token) return ranges;
-			if (token.value === "GraphQLRequestStream.Completed") {
+			if (token.value === "Result.Ok") {
 				const parent = delimiters[delimiters.length - 1];
 				if (parent?.char === "{") {
 					const range = scanBalanced(source, parent.start);
@@ -321,10 +323,8 @@ function extractXVideo(html: string, statusId: string): XDirectVideo | undefined
 	const { document } = parseHTML(html);
 	for (const element of document.querySelectorAll("script:not([src])")) {
 		const script = element.textContent ?? "";
-		if (!script.includes("GraphQLRequestStream.Completed")) continue;
-		for (const event of findStreamEvents(script)) {
-			const result = directProperty(script, event, "result");
-			if (result?.type !== "object" || propertyString(script, result, "kind") !== "Result.Ok") continue;
+		if (!script.includes("Result.Ok")) continue;
+		for (const result of findOkResults(script)) {
 			const payload = propertyString(script, result, "value");
 			if (!payload) continue;
 			let response: unknown;
