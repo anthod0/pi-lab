@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-11-11
+
+### Fixed
+
+- Restored direct MP4 links for X/Twitter video posts after X changed its page data format.
+
 ## [1.1.6] - 2026-11-02
 
 ### Fixed
@@ -75,7 +81,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Widened the supported `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` peer dependency ranges to `>=0.80.3 <1`, preventing installation conflicts with newer pi releases. ([#4](https://github.com/anthod0/pi-lab/issues/4))
 
-[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.6...HEAD
+[Unreleased]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.7...HEAD
+[1.1.7]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.6...webfetch@1.1.7
 [1.1.6]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.5...webfetch@1.1.6
 [1.1.5]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.4...webfetch@1.1.5
 [1.1.4]: https://github.com/anthod0/pi-lab/compare/webfetch@1.1.3...webfetch@1.1.4
