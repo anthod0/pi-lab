@@ -74,7 +74,10 @@ Request Fast processing for chat. `/fast` toggles it; `/fast on`, `/fast off` an
 
 #### Credentials
 
-**OpenAI → Sign in with ChatGPT**, with an `openai` chat model. Inactive when using `openai-codex` or API keys.
+- **OpenAI:** an `openai` chat model using the Responses API, with **Sign in with ChatGPT** or an API key.
+- **OpenAI Codex (legacy):** an `openai-codex` chat model using the Codex login.
+
+Requires the official OpenAI or Codex endpoint. Custom endpoints are not supported. `/fast status` shows the last response tier when the backend reports it; requesting Fast does not guarantee priority processing for every model or account.
 
 ### Web search
 

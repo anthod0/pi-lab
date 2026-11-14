@@ -15,6 +15,8 @@ const SEARCH_SOURCES = "web_search_call.action.sources";
 const SEARCH_TOOLS = new Set(["web_search", "web_search_2025_08_26", "web_search_preview", "web_search_preview_2025_03_11"]);
 
 type RequestState = {
+	provider: string;
+	api: string;
 	model: string;
 	fast: boolean;
 	output: ResponseOutput;
@@ -46,7 +48,7 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 	function updateStatus(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
 		ctx.ui.setStatus(FAST_STATUS,
-			config && fast && isOpenAIChatGPTModel(ctx) ? ctx.ui.theme.fg("dim", "fast") : undefined,
+			config && fast && isFastModel(ctx) ? ctx.ui.theme.fg("dim", "fast") : undefined,
 		);
 	}
 
@@ -145,7 +147,7 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 			updateStatus(ctx);
 			ctx.ui.notify(
 				`Fast requests: ${fast ? "on" : "off"}. ` +
-				(isOpenAIChatGPTModel(ctx)
+				(isFastModel(ctx)
 					? "Applies to the next request." +
 						(lastTier ? ` Last response tier: ${lastTier}.` : "")
 					: "Not applicable to the current model/authentication/endpoint."),
@@ -156,7 +158,7 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 
 	pi.on("before_provider_request", (event, ctx) => {
 		request = undefined;
-		if (!config || !isOpenAIChatGPTModel(ctx)) return;
+		if (!config || !isFastModel(ctx)) return;
 		const payload = object(event.payload);
 		// This hook has no resolved-model metadata. Do not guess for routed/other requests.
 		if (!payload || !ctx.model || payload.model !== ctx.model.id) return;
@@ -164,9 +166,15 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 		if (webSearch && payload.tools !== undefined && !Array.isArray(payload.tools)) {
 			throw new Error("OpenAI web search requires an array of request tools");
 		}
-		request = { model: ctx.model.id, fast, output: new ResponseOutput(), persist: turnActive, capture: webSearch && turnActive };
+		request = {
+			provider: ctx.model.provider, api: ctx.model.api, model: ctx.model.id,
+			fast, output: new ResponseOutput(), persist: turnActive, capture: webSearch && turnActive,
+		};
 		updateStatus(ctx);
 		const result = { ...payload };
+		if (fast) result.service_tier = "priority";
+		else delete result.service_tier;
+		if (!isOpenAIChatGPTModel(ctx)) return result;
 		// Custom entries carry provider data without changing Pi's assistant messages.
 		// Only matching items in the actual request are restored, never compacted or edited history.
 		if (Array.isArray(payload.input)) {
@@ -177,8 +185,6 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 			});
 			result.input = restoreInput(payload.input, records, ctx.model.id);
 		}
-		if (fast) result.service_tier = "priority";
-		else delete result.service_tier;
 		if (!webSearch) return result;
 		const include: unknown[] = Array.isArray(payload.include) ? payload.include : [];
 		result.include = include.includes(SEARCH_SOURCES) ? include : [...include, SEARCH_SOURCES];
@@ -190,7 +196,7 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 	});
 
 	pi.on("provider_stream_event", (event) => {
-		if (event.provider !== "openai" || event.api !== "openai-responses") return;
+		if (!isFastAPI(event.provider, event.api)) return;
 		const data = object(event.data);
 		if (!data) return;
 		const response = object(data.response);
@@ -198,14 +204,14 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 		if (data.type === "response.created" && id) {
 			// Also track idle/unmanaged streams: their later item events must never be
 			// mistaken for a main turn just because they have no response_id field.
-			responses.set(id, request?.model === event.model
+			responses.set(id, request && matchesRequestModel(request, event)
 				? { ...request, output: new ResponseOutput() }
-				: { model: event.model, fast: false, output: new ResponseOutput(), persist: false, capture: false });
+				: { provider: event.provider, api: event.api, model: event.model, fast: false, output: new ResponseOutput(), persist: false, capture: false });
 			return;
 		}
-		if (data.type === "response.completed" || data.type === "response.incomplete" || data.type === "response.failed") {
+		if (data.type === "response.completed" || data.type === "response.done" || data.type === "response.incomplete" || data.type === "response.failed") {
 			const state = id ? responses.get(id) : undefined;
-			if (!state || state.model !== event.model) return;
+			if (!state || !matchesRequestModel(state, event)) return;
 			state.terminal = true;
 			state.output.observe(data);
 			const tier = response?.service_tier;
@@ -215,13 +221,13 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 			return;
 		}
 		if (data.type !== "response.output_item.added" && data.type !== "response.output_item.done") return;
-		const active = [...responses.values()].filter((value) => !value.terminal && value.model === event.model);
+		const active = [...responses.values()].filter((value) => !value.terminal && matchesRequestModel(value, event));
 		const itemId = object(data.item)?.id;
 		const owners = typeof itemId === "string" ? active.filter((value) => value.output?.owns(itemId)) : [];
 		const explicit = typeof data.response_id === "string" ? responses.get(data.response_id) : undefined;
 		const state = typeof data.response_id === "string" ? explicit
 			: owners.length === 1 ? owners[0] : active.length === 1 ? active[0] : undefined;
-		if (state && !state.terminal && state.model === event.model) state.output?.observe(data);
+		if (state && !state.terminal && matchesRequestModel(state, event)) state.output?.observe(data);
 		else if (data.response_id === undefined) {
 			// An unowned item in overlapping streams cannot be attributed. A full terminal
 			// snapshot can recover it; an empty snapshot must not bless a partial history.
@@ -231,13 +237,13 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 
 	pi.on("message_end", (event, ctx) => {
 		const message = event.message;
-		if (message.role !== "assistant" || message.provider !== "openai" ||
-			message.api !== "openai-responses" || !message.responseId) return;
+		if (message.role !== "assistant" || !isFastAPI(message.provider, message.api) || !message.responseId) return;
 		const state = responses.get(message.responseId);
-		if (!state || !state.persist || message.model !== state.model) return;
+		if (!state || !state.persist || !matchesRequestModel(state, message)) return;
 		responses.delete(message.responseId);
 		// Only a finalized assistant message updates the last observed tier, never a warm-up.
-		if (ctx.model?.id === state.model && fast === state.fast && isOpenAIChatGPTModel(ctx)) {
+		if (ctx.model?.id === state.model && ctx.model.provider === state.provider && ctx.model.api === state.api &&
+			fast === state.fast && isFastModel(ctx)) {
 			lastTier = state.tier;
 			updateStatus(ctx);
 		}
@@ -255,6 +261,24 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 			pi.appendEntry(OUTPUT_ENTRY, { model: state.model, responseId: message.responseId, output, toolArguments });
 		}
 	});
+}
+
+function isFastAPI(provider: string, api: string): boolean {
+	return (provider === "openai" && api === "openai-responses") ||
+		(provider === "openai-codex" && api === "openai-codex-responses");
+}
+
+function isFastModel(ctx: ExtensionContext): boolean {
+	const model = ctx.model;
+	if (!model || !isFastAPI(model.provider, model.api)) return false;
+	const baseUrl = model.baseUrl.replace(/\/+$/, "");
+	if (model.provider === "openai") return baseUrl === "https://api.openai.com/v1";
+	return ["https://chatgpt.com/backend-api", "https://chatgpt.com/backend-api/codex",
+		"https://chatgpt.com/backend-api/codex/responses"].includes(baseUrl) && ctx.modelRegistry.isUsingOAuth(model);
+}
+
+function matchesRequestModel(state: RequestState, source: { provider: string; api: string; model: string }): boolean {
+	return state.provider === source.provider && state.api === source.api && state.model === source.model;
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {

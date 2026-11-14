@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Fast mode for OpenAI API-key connections and OpenAI Codex, including `/fast` controls and response-tier status.
+
 ## [1.0.0] - 2026-11-06
 
 ### Added

@@ -67,10 +67,10 @@ test("Fast status follows applicability and the session toggle", async (t) => {
 	assert.equal(app.statuses.size, 0);
 	await app.command("on");
 	assert.equal(app.statuses.size, 1);
-	app.setOAuth(false);
+	app.ctx.model.provider = "anthropic";
 	await app.emit("model_select");
 	assert.equal(app.statuses.size, 0);
-	app.setOAuth(true);
+	app.ctx.model.provider = "openai";
 	await app.emit("model_select");
 	assert.equal(app.statuses.size, 1);
 	await app.command("off");
@@ -83,19 +83,29 @@ test("default requests omit the service tier and do not enable search", async (t
 	assert.deepEqual(await app.payload(), { model: "test-model" });
 });
 
-for (const webSearch of [false, true]) {
-	test(`Fast overrides existing tiers when on and removes them when off; search=${webSearch}`, async (t) => {
-		const app = setup(t, { openai: { fast: true, webSearch } });
-		await app.start();
-		const payload = { model: "test-model", service_tier: "flex", tools: [{ type: "function", name: "read" }] };
-		const original = structuredClone(payload);
-		assert.equal((await app.payload(payload)).service_tier, "priority");
-		await app.command("off");
-		const result = await app.payload(payload);
-		assert.equal(Object.hasOwn(result, "service_tier"), false);
-		assert.deepEqual(result.tools, webSearch ? [...payload.tools, { type: "web_search" }] : payload.tools);
-		assert.deepEqual(payload, original);
-	});
+for (const [name, model, oauth] of [
+	["ChatGPT", {}, true],
+	["API key", {}, false],
+	["Codex", { provider: "openai-codex", api: "openai-codex-responses", baseUrl: "https://chatgpt.com/backend-api" }, true],
+] as const) {
+	for (const webSearch of [false, true]) {
+		test(`Fast overrides tiers when on and removes them when off for ${name}; search=${webSearch}`, async (t) => {
+			const app = setup(t, { openai: { fast: true, webSearch } });
+			Object.assign(app.ctx.model, model);
+			app.setOAuth(oauth);
+			await app.start();
+			assert.equal(app.statuses.size, 1);
+			const payload = { model: "test-model", service_tier: "flex", tools: [{ type: "function", name: "read" }] };
+			const original = structuredClone(payload);
+			assert.equal((await app.payload(payload)).service_tier, "priority");
+			await app.command("off");
+			const result = await app.payload(payload);
+			assert.equal(Object.hasOwn(result, "service_tier"), false);
+			assert.deepEqual(result.tools, webSearch && name === "ChatGPT" ? [...payload.tools, { type: "web_search" }] : payload.tools);
+			assert.deepEqual(payload, original);
+			assert.equal(app.statuses.size, 0);
+		});
+	}
 }
 
 test("enabled features preserve payload fields and tools without mutation", async (t) => {
@@ -128,11 +138,14 @@ test("existing native search configuration is not duplicated or overwritten", as
 });
 
 for (const [name, model, oauth] of [
-	["other providers", { provider: "openai-codex" }, true],
+	["other providers", { provider: "anthropic" }, true],
+	["mismatched Codex API", { provider: "openai-codex" }, true],
 	["other APIs", { api: "openai-completions" }, true],
 	["custom endpoints", { baseUrl: "https://proxy.example/v1" }, true],
 	["lookalike endpoints", { baseUrl: "https://api.openai.com.evil.example/v1" }, true],
-	["API keys", {}, false],
+	["custom API-key endpoints", { baseUrl: "https://proxy.example/v1" }, false],
+	["custom Codex endpoints", { provider: "openai-codex", api: "openai-codex-responses", baseUrl: "https://proxy.example/backend-api" }, true],
+	["lookalike Codex endpoints", { provider: "openai-codex", api: "openai-codex-responses", baseUrl: "https://chatgpt.com.evil.example/backend-api" }, true],
 ] as const) {
 	test(`does not change requests for ${name}`, async (t) => {
 		const app = setup(t, { openai: { fast: true, webSearch: true } });
@@ -141,6 +154,7 @@ for (const [name, model, oauth] of [
 		await app.start();
 		const payload = { model: "test-model", service_tier: "flex" };
 		assert.strictEqual(await app.payload(payload), payload);
+		assert.equal(app.statuses.size, 0);
 	});
 }
 
