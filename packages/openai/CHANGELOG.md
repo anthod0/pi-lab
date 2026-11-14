@@ -2,9 +2,12 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-14
+
 ### Added
 
 - Fast mode for OpenAI API-key connections and OpenAI Codex, including `/fast` controls and response-tier status.
+- Optional `openai.optimizeLatency` setting to reduce repeated history uploads and request latency in long conversations when signed in with ChatGPT.
 
 ## [1.0.0] - 2026-11-06
 
