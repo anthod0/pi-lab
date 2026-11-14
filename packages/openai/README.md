@@ -1,6 +1,6 @@
 # @pi-lab/openai
 
-Image generation and editing through Codex or the OpenAI API, plus Fast mode and native web search for Pi.
+Image generation and editing through Codex or the OpenAI API, plus Fast mode, latency optimization and native web search for Pi.
 
 ## Install and configure
 
@@ -14,6 +14,7 @@ Add the following to `~/.pi/agent/settings.json` (global) or `.pi/settings.json`
 {
   "openai": {
     "fast": false,
+    "optimizeLatency": true,
     "webSearch": true,
     "imageGeneration": { "backend": "codex" }
   }
@@ -94,3 +95,19 @@ When `@pi-lab/websearch` is also installed, native search takes precedence on su
 #### Credentials
 
 **OpenAI → Sign in with ChatGPT**, with an `openai` chat model. Inactive when using `openai-codex` or API keys.
+
+### Latency optimization
+
+Set `openai.optimizeLatency` to `true` and run `/reload` to reduce repeated history uploads and help lower request latency in long conversations. Applies to **OpenAI → Sign in with ChatGPT** chat models.
+
+Fast mode requests priority processing; latency optimization reduces the amount of context uploaded. Both can be enabled together, alongside native web search.
+
+```json
+{
+  "openai": {
+    "optimizeLatency": true
+  }
+}
+```
+
+Disabled by default. API keys and custom endpoints continue using HTTP. When continuation is unavailable, requests send the full conversation automatically. If a WebSocket connection cannot be established, the session uses HTTP until `/reload` or a new session.

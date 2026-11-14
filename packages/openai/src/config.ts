@@ -4,6 +4,7 @@ import { parseImageConfig, type ImageConfig } from "./images/capabilities";
 export interface OpenAIConfig {
 	fast: boolean;
 	webSearch: boolean;
+	optimizeLatency: boolean;
 }
 
 type ConfigSection = Partial<OpenAIConfig> & { imageGeneration?: unknown };
@@ -14,6 +15,7 @@ export function loadConfig(cwd: string, agentDir?: string): OpenAIConfig {
 	return {
 		fast: project.fast ?? global.fast ?? false,
 		webSearch: project.webSearch ?? global.webSearch ?? false,
+		optimizeLatency: project.optimizeLatency ?? global.optimizeLatency ?? false,
 	};
 }
 
@@ -44,7 +46,7 @@ function readSection(readSettings: () => unknown, scope: string): ConfigSection 
 				config.imageGeneration = root.openai[key];
 				continue;
 			}
-			if (key !== "fast" && key !== "webSearch") throw new Error(`unknown openai option: ${key}`);
+			if (key !== "fast" && key !== "webSearch" && key !== "optimizeLatency") throw new Error(`unknown openai option: ${key}`);
 			const value = root.openai[key];
 			if (typeof value !== "boolean") throw new Error(`openai.${key} must be a boolean`);
 			config[key] = value;

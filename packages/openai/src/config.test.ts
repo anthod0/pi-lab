@@ -24,27 +24,27 @@ function sandbox(t: TestContext) {
 	};
 }
 
-test("missing config files disable both features", (t) => {
+test("missing config files disable chat features", (t) => {
 	const { cwd, agentDir } = sandbox(t);
-	assert.deepEqual(loadConfig(cwd, agentDir), { fast: false, webSearch: false });
+	assert.deepEqual(loadConfig(cwd, agentDir), { fast: false, webSearch: false, optimizeLatency: false });
 });
 
 test("project values override individual global values, including explicit false", (t) => {
 	const app = sandbox(t);
 	app.write("global", { openai: { fast: true, webSearch: true } });
 	app.write("local", { openai: { fast: false } });
-	assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: true });
+	assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: true, optimizeLatency: false });
 });
 
 test("an empty config section leaves defaults intact", (t) => {
 	const app = sandbox(t);
 	app.write("global", {});
 	app.write("local", { openai: {} });
-	assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: false });
+	assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: false, optimizeLatency: false });
 });
 
 for (const invalid of ["{", null, [], { openai: null }, { openai: [] },
-	{ openai: { fast: "true" } }, { openai: { webSearch: 1 } }, { openai: { webSerch: true } }]) {
+	{ openai: { fast: "true" } }, { openai: { webSearch: 1 } }, { openai: { optimizeLatency: "true" } }, { openai: { webSerch: true } }]) {
 	test(`rejects invalid configuration ${JSON.stringify(invalid)}`, (t) => {
 		const app = sandbox(t);
 		app.write("local", invalid);
@@ -63,7 +63,7 @@ test("image backend configuration replaces the global selection and can be disab
 	const app = sandbox(t);
 	app.write("global", { openai: { webSearch: true, imageGeneration: { backend: "openai", model: "gpt-image-2.6-flare" } } });
 	app.write("local", { openai: { imageGeneration: { backend: "codex" } } });
-	assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: true });
+	assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: true, optimizeLatency: false });
 	assert.deepEqual(loadImageConfig(app.cwd, app.agentDir), { backend: "codex" });
 	app.write("local", { openai: { imageGeneration: false } });
 	assert.equal(loadImageConfig(app.cwd, app.agentDir), false);
@@ -83,6 +83,14 @@ for (const imageGeneration of [true, null, {}, { backend: "unknown" }, { backend
 		const app = sandbox(t);
 		app.write("global", { openai: { imageGeneration } });
 		assert.throws(() => loadImageConfig(app.cwd, app.agentDir));
-		assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: false });
+		assert.deepEqual(loadConfig(app.cwd, app.agentDir), { fast: false, webSearch: false, optimizeLatency: false });
 	});
 }
+
+test("latency optimization project settings override global settings", (t) => {
+	const app = sandbox(t);
+	app.write("global", { openai: { optimizeLatency: true } });
+	assert.equal(loadConfig(app.cwd, app.agentDir).optimizeLatency, true);
+	app.write("local", { openai: { optimizeLatency: false } });
+	assert.equal(loadConfig(app.cwd, app.agentDir).optimizeLatency, false);
+});

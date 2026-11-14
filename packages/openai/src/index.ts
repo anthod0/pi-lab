@@ -1,3 +1,4 @@
+import { openAIResponsesApi } from "@earendil-works/pi-ai/compat";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { includeNativeSearch } from "./compaction";
@@ -5,6 +6,7 @@ import { loadImageConfig } from "./config";
 import { imageToolRegistration } from "./images/tool";
 import { isNativeWebSearchEnabled, isOpenAIChatGPTModel, loadConfig, type OpenAIConfig } from "./policy";
 import { readReplayRecord, ResponseOutput, restoreInput } from "./replay";
+import { ResponsesWebSocket } from "./websocket";
 
 const FAST_ENTRY = "pi-lab:openai-fast";
 const FAST_STATUS = "pi-lab:openai-fast";
@@ -24,12 +26,22 @@ type RequestState = {
 
 export default function openai(pi: ExtensionAPI, options: { agentDir?: string } = {}): void {
 	const registerImageTool = imageToolRegistration(pi);
+	const transport = new ResponsesWebSocket();
+	let registered = false;
 	let config: OpenAIConfig | undefined;
 	let fast = false;
 	let request: RequestState | undefined;
 	const responses = new Map<string, RequestState>();
 	let turnActive = false;
 	let lastTier: string | undefined;
+
+	function resetTransport(): void {
+		transport.close();
+		if (registered) {
+			pi.unregisterProvider("openai");
+			registered = false;
+		}
+	}
 
 	function updateStatus(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
@@ -56,6 +68,7 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 	}
 
 	pi.on("session_start", (_event, ctx) => {
+		resetTransport();
 		config = undefined;
 		turnActive = false;
 		fast = false;
@@ -64,6 +77,16 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 		registerImageTool(false);
 		try {
 			config = loadConfig(ctx.cwd, options.agentDir);
+			if (config.optimizeLatency) {
+				const builtin = openAIResponsesApi();
+				pi.registerProvider("openai", {
+					api: "openai-responses",
+					streamSimple: (model, context, options) => builtin.streamSimple(model, context, {
+						...options, fetch: model.provider === "openai" ? transport.fetch(options?.fetch) : options?.fetch,
+					}),
+				});
+				registered = true;
+			}
 			restoreFast(ctx);
 			registerImageTool(loadImageConfig(ctx.cwd, options.agentDir, ctx.isProjectTrusted()));
 		} finally {
@@ -96,6 +119,7 @@ export default function openai(pi: ExtensionAPI, options: { agentDir?: string } 
 		clearRequest();
 	});
 	pi.on("session_shutdown", (_event, ctx) => {
+		resetTransport();
 		turnActive = false;
 		clearRequest();
 		if (ctx.hasUI) ctx.ui.setStatus(FAST_STATUS, undefined);
